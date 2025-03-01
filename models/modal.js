@@ -16,10 +16,9 @@ module.exports = (nosql) => ({
     Image: nosql.model(
         'Image',
         new nosql.Schema({
+            imageId : { type: Number, required: true, unique: true},
             url: { type: String, required: true },
-            title: { type: String },
             imageType: { type: String, required: true },
-            description: { type: String },
             uploadedAt: { type: Date, default: Date.now },
         })
     ),
@@ -27,8 +26,8 @@ module.exports = (nosql) => ({
         'Course',
         new nosql.Schema({
             title: { type: String, required: true },
-            description: String,
-            imageUrl: String,
+            description: { type: String, required: true },
+            image:{ type: nosql.Schema.Types.ObjectId, required: true,ref: 'Image' },
             price: Number,
             duration: String,
             instructor: { type: nosql.Schema.Types.ObjectId, ref: 'Instructor' },

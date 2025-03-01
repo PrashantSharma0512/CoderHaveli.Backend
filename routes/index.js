@@ -1,5 +1,5 @@
 const router = require('express').Router();
-
-router.get('/', (req, res) => { res.send('Hello World') }); 
+const index = require('../controllers/indexController');
+router.get('/api/get-courses',index.getCourseData); 
 
 module.exports = router;    
