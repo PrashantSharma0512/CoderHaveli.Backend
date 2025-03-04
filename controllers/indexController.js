@@ -55,12 +55,38 @@ const getCourseData = async (req, res) => {
         return res.status(500).json({ error: 'Internal Server Error' });
     }
 };
+const getCarouselData = async (req, res) => {
+    try {
+        const Image = nosql.model('Image');
 
+        const carouselData = await Image.find({ imageType: 'carousel' }, { url : 1,_id : 0 });
+
+        res.json(carouselData);
+    } catch (error) {
+        console.error('Error fetching carousel data:', error);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+const getCardData = async (req, res) => {
+    try {
+        const course = nosql.model('Course');
+        const courseData = await course.aggregate(
+            
+
+        )
+        res.json(courseData);
+    } catch (error) {
+        console.error('Error fetching card data:', error);
+        return res.status(500).json({ error: 'Internal Server Error' });
+        
+    }
+}
 
 
 
 
 
 indexController.getCourseData = getCourseData;
+indexController.getCarouselData = getCarouselData;
 
 module.exports = indexController;
