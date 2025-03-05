@@ -69,24 +69,69 @@ const getCarouselData = async (req, res) => {
 };
 const getCardData = async (req, res) => {
     try {
-        const course = nosql.model('Course');
-        const courseData = await course.aggregate(
-            
+        const Course = nosql.model('Course');
+        const courseData = await Course.aggregate([
+            {
+                $lookup: {
+                    from: 'images',
+                    localField: 'image',
+                    foreignField: '_id',
+                    as: 'imageData'
+                }
+            },
+            { 
+                $unwind: { path: '$imageData', preserveNullAndEmptyArrays: true } 
+            },
+            {
+                $lookup: {
+                    from: 'instructors',
+                    localField: 'instructor',
+                    foreignField: '_id',
+                    as: 'instructorData'
+                }
+            },
+            { 
+                $unwind: { path: '$instructorData', preserveNullAndEmptyArrays: true } 
+            },
+            {
+                $lookup: {
+                    from: 'categories',
+                    localField: 'category',
+                    foreignField: '_id',
+                    as: 'categoryData'
+                }
+            },
+            { 
+                $unwind: { path: '$categoryData', preserveNullAndEmptyArrays: true } 
+            },
+            {
+                $match: { 'imageData.imageType': 'course' }
+            },
+            {
+                $project: {
+                    title: 1,
+                    description: 1,
+                    price: 1,
+                    duration: 1,
+                    image: { url: '$imageData.url', imageId: '$imageData.imageId' },
+                    instructor: { name: '$instructorData.name' },
+                    category: { name: '$categoryData.name' }
+                }
+            }
+        ]);
 
-        )
         res.json(courseData);
     } catch (error) {
         console.error('Error fetching card data:', error);
         return res.status(500).json({ error: 'Internal Server Error' });
-        
     }
-}
-
+};
 
 
 
 
 indexController.getCourseData = getCourseData;
 indexController.getCarouselData = getCarouselData;
+indexController.getCardData = getCardData;
 
 module.exports = indexController;

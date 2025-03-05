@@ -16,7 +16,7 @@ module.exports = (nosql) => ({
     Image: nosql.model(
         'Image',
         new nosql.Schema({
-            imageId : { type: Number, required: true, unique: true},
+            imageId: { type: Number, required: true, unique: true },
             url: { type: String, required: true },
             imageType: { type: String, required: true },
             uploadedAt: { type: Date, default: Date.now },
@@ -27,7 +27,7 @@ module.exports = (nosql) => ({
         new nosql.Schema({
             title: { type: String, required: true },
             description: { type: String, required: true },
-            image:{ type: nosql.Schema.Types.ObjectId, required: true,ref: 'Image' },
+            image: { type: nosql.Schema.Types.ObjectId, required: true, ref: 'Image' },
             price: Number,
             duration: String,
             instructor: { type: nosql.Schema.Types.ObjectId, ref: 'Instructor' },
@@ -36,6 +36,15 @@ module.exports = (nosql) => ({
             modifiedAt: { type: Date, default: Date.now }
         })
     ),
+    Tutorial: nosql.model('Tutorial', new nosql.Schema({
+        title: { type: String, required: true },
+        description: { type: String, required: true },
+        image: { type: nosql.Schema.Types.ObjectId, required: true, ref: 'Image' },
+        instructor: { type: nosql.Schema.Types.ObjectId, ref: 'Instructor' },
+        category: { type: nosql.Schema.Types.ObjectId, ref: 'Category' },
+        createdAt: { type: Date, default: Date.now },
+        modifiedAt: { type: Date, default: Date.now }
+    })),
     Instructor: nosql.model(
         'Instructor',
         new nosql.Schema({
