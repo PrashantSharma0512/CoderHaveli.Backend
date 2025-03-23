@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+
 module.exports = (nosql) => ({
     User: nosql.model(
         'User',
@@ -64,9 +65,10 @@ module.exports = (nosql) => ({
     Code: nosql.model(
         'Code',
         new nosql.Schema({
-            quesID: { type: String, required: true, unique: true },
+            quesID: { type: String, required: true},
             questionName: { type: String, required: true },
             code: { type: String, required: true },
+            codelanguage: { type: String, required: true },
             complexityType: { type: String, required: true, enum: ['Brute Force', 'Optimised', 'Most Optimised'] },
             time_complexity: { type: String, default: null },
             space_complexity: { type: String, default: null },
@@ -105,8 +107,8 @@ module.exports = (nosql) => ({
             explaination: { type: String, }
         })
     ),
-    Contraints: nosql.model(
-        'Contraints',
+    Constraints: nosql.model(
+        'Constraints',
         new nosql.Schema({
             quesID: { type: String, required: true },
             contraints: { type: String, required: true }
@@ -125,6 +127,17 @@ module.exports = (nosql) => ({
         new nosql.Schema({
             quesID: { type: String, required: true },
             code: { type: String, required: true },
+            createdAt: { type: Date, default: Date.now },
+            modifiedAt: { type: Date, default: Date.now }
+        })
+    ),
+    Approaches: nosql.model(
+        'Approaches',
+        new nosql.Schema({
+            quesID: { type: String, required: true },
+            approachDesc: { type: String, required: true },
+            approachType: { type: String, required: true ,enum: ['Brute Force', 'Optimised', 'Most Optimised'] },
+            code: {type: nosql.Schema.Types.ObjectId, ref: 'Code'},
             createdAt: { type: Date, default: Date.now },
             modifiedAt: { type: Date, default: Date.now }
         })
