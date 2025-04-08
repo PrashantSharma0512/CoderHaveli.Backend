@@ -52,7 +52,7 @@ module.exports = (nosql) => ({
             name: { type: String, required: true },
             email: { type: String, required: true },
             bio: String,
-            imageUrl: String,
+            imageUrl: { type: nosql.Schema.Types.ObjectId,ref: 'Image' },
             createdAt: { type: Date, default: Date.now }
         })
     ),
@@ -66,7 +66,7 @@ module.exports = (nosql) => ({
         'Code',
         new nosql.Schema({
             quesID: { type: String, required: true},
-            questionName: { type: String, required: true },
+            quesName: { type: String, required: true },
             code: { type: String, required: true },
             codelanguage: { type: String, required: true },
             complexityType: { type: String, required: true, enum: ['Brute Force', 'Optimised', 'Most Optimised'] },
@@ -111,7 +111,7 @@ module.exports = (nosql) => ({
         'Constraints',
         new nosql.Schema({
             quesID: { type: String, required: true },
-            contraints: { type: String, required: true }
+            contraints: { type: [String], required: true }  
         })
     ),
     Faqs: nosql.model(
