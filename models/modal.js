@@ -142,5 +142,26 @@ module.exports = (nosql) => ({
             modifiedAt: { type: Date, default: Date.now }
         })
     ),
+    Progess : nosql.model(
+        'Progess',
+        new nosql.Schema({
+            quesID: { type: String, required: true },
+            userID: { type: String, required: true },
+            progress: { type: String, required: true },
+            createdAt: { type: Date, default: Date.now },
+            modifiedAt: { type: Date, default: Date.now }
+        })
+    ),
+    Community: nosql.model(
+        'Community',
+        new nosql.Schema({
+            quesID: { type: String, required: true },
+            userID: { type: String, required: true },
+            question: { type: String, required: true },
+            answer: { type: String, required: true },
+            createdAt: { type: Date, default: Date.now },
+            modifiedAt: { type: Date, default: Date.now }
+        })
+    ),
 
 });
