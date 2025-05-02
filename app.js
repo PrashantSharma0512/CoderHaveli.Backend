@@ -27,8 +27,9 @@ app.use((req, res, next) => {
 });
 
 // Routes
-const indexRoutes = require('./routes/index');
-app.use('/', indexRoutes);
+
+app.use('/', require('./routes/index'));
+app.use('/problem', require('./routes/problem'));
 
 // Start server
 const PORT = process.env.PORT || 5000;

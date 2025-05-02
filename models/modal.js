@@ -52,7 +52,7 @@ module.exports = (nosql) => ({
             name: { type: String, required: true },
             email: { type: String, required: true },
             bio: String,
-            imageUrl: { type: nosql.Schema.Types.ObjectId,ref: 'Image' },
+            image: { type: nosql.Schema.Types.ObjectId, ref: 'Image' },
             createdAt: { type: Date, default: Date.now }
         })
     ),
@@ -65,7 +65,7 @@ module.exports = (nosql) => ({
     Code: nosql.model(
         'Code',
         new nosql.Schema({
-            quesID: { type: String, required: true},
+            quesId: { type: String, required: true },
             quesName: { type: String, required: true },
             code: { type: String, required: true },
             codelanguage: { type: String, required: true },
@@ -79,7 +79,7 @@ module.exports = (nosql) => ({
     TestCase: nosql.model(
         'TestCase',
         new nosql.Schema({
-            quesID: { type: String, required: true },
+            quesId: { type: String, required: true },
             input: { type: String, required: true },
             output: { type: String, required: true }
         })
@@ -87,7 +87,7 @@ module.exports = (nosql) => ({
     ProblemList: nosql.model(
         'ProblemList',
         new nosql.Schema({
-            quesID: { type: String, required: true },
+            quesId: { type: String, required: true },
             quesName: { type: String, required: true },
             quesDesc: { type: String, required: true },
             difficulty: { type: String, required: true, enum: ['Easy', 'Medium', 'Hard'] },
@@ -101,7 +101,7 @@ module.exports = (nosql) => ({
     ProblemExample: nosql.model(
         'ProblemExample',
         new nosql.Schema({
-            quesID: { type: String, required: true },
+            quesId: { type: String, required: true },
             input: { type: String, required: true },
             output: { type: String, required: true },
             explaination: { type: String, }
@@ -110,14 +110,14 @@ module.exports = (nosql) => ({
     Constraints: nosql.model(
         'Constraints',
         new nosql.Schema({
-            quesID: { type: String, required: true },
-            contraints: { type: [String], required: true }  
+            quesId: { type: String, required: true },
+            contraints: { type: [String], required: true }
         })
     ),
     Faqs: nosql.model(
         'Faqs',
         new nosql.Schema({
-            quesID: { type: String, required: true },
+            quesId: { type: String, required: true },
             question: { type: String, required: true },
             answer: { type: String, required: true }
         })
@@ -125,7 +125,7 @@ module.exports = (nosql) => ({
     Submissions: nosql.model(
         'Submissions',
         new nosql.Schema({
-            quesID: { type: String, required: true },
+            quesId: { type: String, required: true },
             code: { type: String, required: true },
             createdAt: { type: Date, default: Date.now },
             modifiedAt: { type: Date, default: Date.now }
@@ -134,18 +134,18 @@ module.exports = (nosql) => ({
     Approaches: nosql.model(
         'Approaches',
         new nosql.Schema({
-            quesID: { type: String, required: true },
+            quesId: { type: String, required: true },
             approachDesc: { type: String, required: true },
-            approachType: { type: String, required: true ,enum: ['Brute Force', 'Optimised', 'Most Optimised'] },
-            code: {type: nosql.Schema.Types.ObjectId, ref: 'Code'},
+            approachType: { type: String, required: true, enum: ['Brute Force', 'Improved', 'Optimised'] },
+            code: { type: nosql.Schema.Types.ObjectId, ref: 'Code' },
             createdAt: { type: Date, default: Date.now },
             modifiedAt: { type: Date, default: Date.now }
         })
     ),
-    Progess : nosql.model(
+    Progess: nosql.model(
         'Progess',
         new nosql.Schema({
-            quesID: { type: String, required: true },
+            quesId: { type: String, required: true },
             userID: { type: String, required: true },
             progress: { type: String, required: true },
             createdAt: { type: Date, default: Date.now },
@@ -155,13 +155,22 @@ module.exports = (nosql) => ({
     Community: nosql.model(
         'Community',
         new nosql.Schema({
-            quesID: { type: String, required: true },
-            userID: { type: String, required: true },
+            problem: { type: nosql.Schema.Types.ObjectId, ref: 'ProblemList', required: true },
+            author: { type: nosql.Schema.Types.ObjectId, ref: 'User', required: true },
             question: { type: String, required: true },
-            answer: { type: String, required: true },
+            answers: [{
+                author: { type: nosql.Schema.Types.ObjectId, ref: 'User' },
+                answer: String,
+                createdAt: { type: Date, default: Date.now }
+            }],
             createdAt: { type: Date, default: Date.now },
             modifiedAt: { type: Date, default: Date.now }
         })
     ),
+    email: { type: String, required: true, unique: true, index: true },
+
+    difficulty: { type: String, required: true, enum: ['easy', 'medium', 'hard'], index: true },
+
+    status: { type: String, required: true, index: true }
 
 });
