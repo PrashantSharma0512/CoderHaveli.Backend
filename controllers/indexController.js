@@ -67,6 +67,7 @@ const getCarouselData = async (req, res) => {
         return res.status(500).json({ error: 'Internal Server Error' });
     }
 };
+
 const getCardData = async (req, res) => {
     try {
         const Tutorial = nosql.model('Tutorial');
@@ -191,9 +192,6 @@ const getProblemData = async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
-
-
-
 
 const getInstructorData = async (req, res) => {
     try {

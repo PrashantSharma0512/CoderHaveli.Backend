@@ -114,12 +114,11 @@ module.exports = (nosql) => ({
             contraints: { type: [String], required: true }
         })
     ),
-    Faqs: nosql.model(
-        'Faqs',
+    hint: nosql.model(
+        'Hint',
         new nosql.Schema({
             quesId: { type: String, required: true },
-            question: { type: String, required: true },
-            answer: { type: String, required: true }
+            hints: [{ type: String, required: true }]
         })
     ),
     Submissions: nosql.model(

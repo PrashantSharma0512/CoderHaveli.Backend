@@ -18,11 +18,9 @@ const getAllProblems = async (req, res) => {
 const getProblemById = async (req, res) => {
     try {
         const Problem = nosql.model('ProblemList');
-        const {id} = req.params;
-        
-        const quesid  = await Problem.find({_id : id});
-        console.log(quesid);
-        
+        const { id } = req.params;
+console.log('id', id);
+
         const getProblem = await Problem.aggregate([
             {
                 $match: { _id: new nosql.Types.ObjectId(id) }
@@ -32,10 +30,9 @@ const getProblemById = async (req, res) => {
                     from: 'problemexamples',
                     localField: 'quesId',
                     foreignField: 'quesId',
-                    as: 'problemDetails'
+                    as: 'problemExample'
                 }
             },
-            
             {
                 $lookup: {
                     from: 'constraints',
@@ -44,16 +41,16 @@ const getProblemById = async (req, res) => {
                     as: 'constraints'
                 }
             },
-            {$unwind: '$constraints'},
+            { $unwind: { path: '$constraints', preserveNullAndEmptyArrays: true } },
             {
                 $lookup: {
-                    from: 'faqs',
+                    from: 'hints',
                     localField: 'quesId',
                     foreignField: 'quesId',
-                    as: 'faqs'
+                    as: 'hints'
                 }
             },
-            // {$unwind: '$faqs'},
+            { $unwind: { path: '$hints', preserveNullAndEmptyArrays: true } },
             {
                 $project: {
                     quesId: 1,
@@ -61,27 +58,29 @@ const getProblemById = async (req, res) => {
                     quesDesc: 1,
                     difficulty: 1,
                     problemExample: {
-                        input: '$problemDetails.input',
-                        output: '$problemDetails.output',
-                        explaination: '$problemDetails.explaination'
+                        $map: {
+                            input: "$problemExample",
+                            as: "example",
+                            in: {
+                                input: "$$example.input",
+                                output: "$$example.output",
+                                explaination: "$$example.explaination"
+                            }
+                        }
                     },
-                    faqs: {
-                        question: '$faqs.question',
-                        answer: '$faqs.answer'
-                    },
-                    contraints: '$constraints.contraints',
-
-                    submissions: 1,
-                    community: 1
+                    hints: "$hints.hints",
+                    constraints: "$constraints.contraints"
                 }
             }
         ]);
+
         res.json(getProblem);
     } catch (error) {
         console.error('Error fetching problem:', error);
         return res.status(500).json({ error: error.message });
     }
-}   
+};
+  
 // const getProblemById = async (req, res) => {
 //     try {
 //         const Problem = nosql.model('ProblemList');
