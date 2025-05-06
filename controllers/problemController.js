@@ -12,14 +12,14 @@ const getAllProblems = async (req, res) => {
         console.error('Error fetching problems:', error);
         return res.status(500).json({ error: error.message });
     }
-}  
+}
 
 
 const getProblemById = async (req, res) => {
     try {
         const Problem = nosql.model('ProblemList');
         const { id } = req.params;
-console.log('id', id);
+        console.log('id', id);
 
         const getProblem = await Problem.aggregate([
             {
@@ -80,92 +80,33 @@ console.log('id', id);
         return res.status(500).json({ error: error.message });
     }
 };
-  
-// const getProblemById = async (req, res) => {
-//     try {
-//         const Problem = nosql.model('ProblemList');
-//         const { id } = req.params;
-        
-//         const getProblem = await Problem.aggregate([
-//             {
-//                 $match: { _id: new nosql.Types.ObjectId(id) }
-//             },
-//             {
-//                 $lookup: {
-//                     from: 'problemexamples',
-//                     localField: 'quesId',
-//                     foreignField: 'quesId',
-//                     as: 'problemExamples'
-//                 }
-//             },
-//             {
-//                 $lookup: {
-//                     from: 'constraints',
-//                     localField: 'quesId',
-//                     foreignField: 'quesId',
-//                     as: 'constraints'
-//                 }
-//             },
-//             {
-//                 $lookup: {
-//                     from: 'faqs',
-//                     localField: 'quesId',
-//                     foreignField: 'quesId',
-//                     as: 'faqs'
-//                 }
-//             },
-//             {
-//                 $project: {
-//                     quesId: 1,
-//                     quesName: 1,
-//                     quesDesc: 1,
-//                     difficulty: 1,
-//                     problemExamples: {
-//                         $map: {
-//                             input: '$problemExamples',
-//                             as: 'example',
-//                             in: {
-//                                 input: '$$example.input',
-//                                 output: '$$example.output',
-//                                 explanation: '$$example.explaination'
-//                             }
-//                         }
-//                     },
-//                     faqs: {
-//                         $map: {
-//                             input: '$faqs',
-//                             as: 'faq',
-//                             in: {
-//                                 question: '$$faq.question',
-//                                 answer: '$$faq.answer'
-//                             }
-//                         }
-//                     },
-//                     constraints: {
-//                         $ifNull: [
-//                             { $arrayElemAt: ['$constraints.contraints', 0] },
-//                             []
-//                         ]
-//                     },
-//                     submissions: 1,
-//                     createdAt: 1
-//                 }
-//             }
-//         ]);
+const getEditorialById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const problem = nosq.model('ProblemList')
+        const quesId = problem.findOne({ _id: new nosql.Types.ObjectId(id) })
+        const Approaches = nosq.model('Approaches')
+        const data = Approaches.find(
+            { quesId: quesId },
+            {
+                approachDesc : 1 ,
+                approachType: 1,
+                code:1,
+                time_complexity: 1,
+                space_complexity:1,
+            }
+        )
+        res.send(data)
+    } catch (error) {
+        console.log('error ', error);
+        res.send(error.message)
 
-//         if (!getProblem || getProblem.length === 0) {
-//             return res.status(404).json({ error: 'Problem not found' });
-//         }
-
-//         res.json(getProblem[0]);
-//     } catch (error) {
-//         console.error('Error fetching problem:', error);
-//         return res.status(500).json({ error: error.message });
-//     }
-// };
+    }
+}
 
 
 
 problemController.getAllProblems = getAllProblems;
 problemController.getProblemById = getProblemById;
+problemController.getEditorialById = getEditorialById;
 module.exports = problemController;

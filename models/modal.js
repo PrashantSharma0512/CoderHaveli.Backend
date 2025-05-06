@@ -68,7 +68,7 @@ module.exports = (nosql) => ({
             quesId: { type: String, required: true },
             quesName: { type: String, required: true },
             code: { type: String, required: true },
-            codelanguage: { type: String, required: true },
+            codinglanguage: { type: String, required: true },
             complexityType: { type: String, required: true, enum: ['Brute Force', 'Optimised', 'Most Optimised'] },
             time_complexity: { type: String, default: null },
             space_complexity: { type: String, default: null },
@@ -126,21 +126,55 @@ module.exports = (nosql) => ({
         new nosql.Schema({
             quesId: { type: String, required: true },
             code: { type: String, required: true },
+            codelanguage: { type: String, required: true },
+            userID: { type: nosql.Schema.Types.ObjectId, required: true },
+            status: { type: String, required: true, enum: ['Accepted', 'Wrong Answer', 'Time Limit Exceeded', 'Runtime Error', 'Compilation Error'] },
             createdAt: { type: Date, default: Date.now },
             modifiedAt: { type: Date, default: Date.now }
         })
     ),
+    // Approaches: nosql.model(
+    //     'Approaches',
+    //     new nosql.Schema({
+    //         quesId: { type: String, required: true },
+    //         approachDesc: { type: String, required: true },
+    //         approachType: { type: String, required: true, enum: ['Brute Force', 'Improved', 'Optimised'] },
+    //         code: { type: nosql.Schema.Types.ObjectId, ref: 'Code' },
+    //         approachName: { type: String },
+    //         time_complexity: { type: String, default: null },
+    //         space_complexity: { type: String, default: null },
+    //         order: { type: Number, default: 0 },
+    //         createdAt: { type: Date, default: Date.now },
+    //         modifiedAt: { type: Date, default: Date.now }
+    //     })
+    // ),
+
+    //new schema for approach
     Approaches: nosql.model(
         'Approaches',
         new nosql.Schema({
             quesId: { type: String, required: true },
+            approachName: { type: String },
             approachDesc: { type: String, required: true },
-            approachType: { type: String, required: true, enum: ['Brute Force', 'Improved', 'Optimised'] },
-            code: { type: nosql.Schema.Types.ObjectId, ref: 'Code' },
+            approachType: {
+                type: String,
+                required: true,
+                enum: ['Brute Force', 'Improved', 'Optimised']
+            },
+            code: {
+                javascript: { type: String, default: null },
+                python: { type: String, default: null },
+                java: { type: String, default: null },
+                cpp : { type: String, default: null },
+            },
+            time_complexity: { type: String, default: null },
+            space_complexity: { type: String, default: null },
+            order: { type: Number, default: 0 },
             createdAt: { type: Date, default: Date.now },
             modifiedAt: { type: Date, default: Date.now }
         })
     ),
+
     Progess: nosql.model(
         'Progess',
         new nosql.Schema({
