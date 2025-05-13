@@ -1,5 +1,3 @@
-const { get } = require("mongoose");
-
 const problemController = {}
 
 
@@ -19,7 +17,10 @@ const getProblemById = async (req, res) => {
     try {
         const Problem = nosql.model('ProblemList');
         const { id } = req.params;
-
+        
+        if (!nosql.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ error: "Invalid problem ID format" });
+        }
         const getProblem = await Problem.aggregate([
             {
                 $match: { _id: new nosql.Types.ObjectId(id) }
@@ -106,14 +107,14 @@ const getProblemById = async (req, res) => {
 const getEditorialById = async (req, res) => {
     try {
         const { id } = req.params;
-        const ProblemList = nosql.model('ProblemList'); 
+        const ProblemList = nosql.model('ProblemList');
         const Approaches = nosql.model('Approaches');
 
         const quesIndex = await ProblemList.findOne({ _id: id }, { quesId: 1 });
         if (!quesIndex) {
             return res.status(404).json({ message: "Problem not found" });
         }
-    
+
 
         // const data = await Approaches.aggregate([
         //     {
