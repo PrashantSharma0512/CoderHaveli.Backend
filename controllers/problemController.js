@@ -19,7 +19,6 @@ const getProblemById = async (req, res) => {
     try {
         const Problem = nosql.model('ProblemList');
         const { id } = req.params;
-        console.log('id', id);
 
         const getProblem = await Problem.aggregate([
             {
@@ -80,29 +79,114 @@ const getProblemById = async (req, res) => {
         return res.status(500).json({ error: error.message });
     }
 };
+// const getEditorialById = async (req, res) => {
+//     try {
+//         const { id } = req.params;
+//         const problem = nosql.model('ProblemList')
+//         const quesIndex = await problem.findOne({ _id: id },{quesId : 1});
+//         const Approaches = nosql.model('Approaches')
+//         const data = await Approaches.find(
+//             { quesId: quesIndex }
+//             // {
+//             //     approachDesc : 1 ,
+//             //     approachType: 1,
+//             //     code:1,
+//             //     time_complexity: 1,
+//             //     space_complexity:1,
+//             // }
+//         )
+//         res.send(data)
+
+//     } catch (error) {
+//         console.error('error ', error);
+//         res.send(error.message)
+
+//     }
+// }
 const getEditorialById = async (req, res) => {
     try {
         const { id } = req.params;
-        const problem = nosq.model('ProblemList')
-        const quesId = problem.findOne({ _id: new nosql.Types.ObjectId(id) })
-        const Approaches = nosq.model('Approaches')
-        const data = Approaches.find(
-            { quesId: quesId },
-            {
-                approachDesc : 1 ,
-                approachType: 1,
-                code:1,
-                time_complexity: 1,
-                space_complexity:1,
-            }
-        )
-        res.send(data)
-    } catch (error) {
-        console.log('error ', error);
-        res.send(error.message)
+        const ProblemList = nosql.model('ProblemList'); 
+        const Approaches = nosql.model('Approaches');
 
+        const quesIndex = await ProblemList.findOne({ _id: id }, { quesId: 1 });
+        if (!quesIndex) {
+            return res.status(404).json({ message: "Problem not found" });
+        }
+    
+
+        // const data = await Approaches.aggregate([
+        //     {
+        //         $lookup: {
+        //             from: 'problemlists',
+        //             localField: 'quesId',
+        //             foreignField: 'quesIndex.quesId',
+        //             as: 'approachesData'
+        //         }
+        //     },
+        //     {
+        //         $unwind: '$approachesData'
+        //     },
+        //     {
+        //         $project: {
+        //             approachDesc: 1,
+        //             approachType: 1,
+        //             code: 1,
+        //             time_complexity: 1,
+        //             space_complexity: 1,
+        //         }
+        //     }
+        // ])
+
+        const data = await Approaches.findOne(
+            { quesId: quesIndex.quesId },
+            {
+                approachDesc: 1,
+                approachType: 1,
+                code: 1,
+                time_complexity: 1,
+                space_complexity: 1,
+            }
+        );
+
+        res.status(200).json(data);
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ message: error.message });
     }
-}
+};
+// const getEditorialById = async (req, res) => {
+//     try {
+//         const { id } = req.params;
+//         const ProblemList = nosql.model('ProblemList');
+//         const Approaches = nosql.model('Approaches');
+
+//         const quesIndex = await ProblemList.findOne({ _id: id }, { quesId: 1 }).lean();
+//         if (!quesIndex) {
+//             return res.status(404).json({ message: "Problem not found" });
+//         }
+
+// 
+
+//         // Fetching approaches using quesId without $lookup
+//         const data = await Approaches.find(
+//             { quesId: quesIndex.quesId },
+//             // {
+//             //     approachDesc: 1,
+//             //     approachType: 1,
+//             //     code: 1,
+//             //     time_complexity: 1,
+//             //     space_complexity: 1,
+//             // }
+//         ).lean();
+
+//         res.status(200).json(data);
+//     } catch (error) {
+//         console.error('Error:', error);
+//         res.status(500).json({ message: error.message });
+//     }
+// };
+
 
 
 
