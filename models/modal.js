@@ -94,6 +94,7 @@ module.exports = (nosql) => ({
             problemExample: { type: nosql.Schema.Types.ObjectId, ref: 'ProblemExample' },
             code: [{ type: nosql.Schema.Types.ObjectId, ref: 'Code' }],
             contraints: { type: nosql.Schema.Types.ObjectId, ref: 'Contraints' },
+            tags:[{type:String,default:null}],
             createdAt: { type: Date, default: Date.now },
             modifiedAt: { type: Date, default: Date.now }
         })
@@ -169,6 +170,7 @@ module.exports = (nosql) => ({
             },
             time_complexity: { type: String, default: null },
             space_complexity: { type: String, default: null },
+            videoUrl: { type: String, default: null },
             order: { type: Number, default: 0 },
             createdAt: { type: Date, default: Date.now },
             modifiedAt: { type: Date, default: Date.now }
