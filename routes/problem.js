@@ -5,5 +5,5 @@ const Problem = require('../controllers/problemController');
 Router.get('/',Problem.getAllProblems)
 Router.get('/:id', Problem.getProblemById);
 Router.get('/get-editorial/:id', Problem.getEditorialById);
-
+Router.post('/run',Problem.run)
 module.exports = Router;

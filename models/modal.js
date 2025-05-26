@@ -81,7 +81,10 @@ module.exports = (nosql) => ({
         new nosql.Schema({
             quesId: { type: String, required: true },
             input: { type: String, required: true },
-            output: { type: String, required: true }
+            output: { type: String, required: true },
+            explaination: { type: String, default: '' },
+            timeLimit: { type: Number, default: 1000 }, 
+            memoryLimit: { type: Number, default: 256 },
         })
     ),
     ProblemList: nosql.model(
@@ -94,20 +97,20 @@ module.exports = (nosql) => ({
             problemExample: { type: nosql.Schema.Types.ObjectId, ref: 'ProblemExample' },
             code: [{ type: nosql.Schema.Types.ObjectId, ref: 'Code' }],
             contraints: { type: nosql.Schema.Types.ObjectId, ref: 'Contraints' },
-            tags:[{type:String,default:null}],
+            tags: [{ type: String, default: null }],
             createdAt: { type: Date, default: Date.now },
             modifiedAt: { type: Date, default: Date.now }
         })
     ),
-    ProblemExample: nosql.model(
-        'ProblemExample',
-        new nosql.Schema({
-            quesId: { type: String, required: true },
-            input: { type: String, required: true },
-            output: { type: String, required: true },
-            explaination: { type: String, }
-        })
-    ),
+    // ProblemExample: nosql.model(
+    //     'ProblemExample',
+    //     new nosql.Schema({
+    //         quesId: { type: String, required: true },
+    //         input: { type: String, required: true },
+    //         output: { type: String, required: true },
+
+    //     })
+    // ),
     Constraints: nosql.model(
         'Constraints',
         new nosql.Schema({
@@ -123,13 +126,13 @@ module.exports = (nosql) => ({
         })
     ),
     Submissions: nosql.model(
-        'Submissions',
+        'Submission',
         new nosql.Schema({
             quesId: { type: String, required: true },
             code: { type: String, required: true },
             codelanguage: { type: String, required: true },
-            userID: { type: nosql.Schema.Types.ObjectId, required: true },
-            status: { type: String, required: true, enum: ['Accepted', 'Wrong Answer', 'Time Limit Exceeded', 'Runtime Error', 'Compilation Error'] },
+            userID: { type: nosql.Schema.Types.ObjectId, required: true, ref: 'User' },
+            status: { type: String, required: true, enum: ['Accepted', 'Wrong Answer', 'Time Limit Exceeded', 'Runtime Error', 'Compilation Error'], default: '' },
             createdAt: { type: Date, default: Date.now },
             modifiedAt: { type: Date, default: Date.now }
         })
@@ -166,7 +169,7 @@ module.exports = (nosql) => ({
                 javascript: { type: String, default: null },
                 python: { type: String, default: null },
                 java: { type: String, default: null },
-                cpp : { type: String, default: null },
+                cpp: { type: String, default: null },
             },
             time_complexity: { type: String, default: null },
             space_complexity: { type: String, default: null },
