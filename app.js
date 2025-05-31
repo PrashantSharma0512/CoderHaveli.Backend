@@ -28,12 +28,12 @@ app.use((req, res, next) => {
 
 // Routes
 
-app.use('/auth', require('./routes/auth'));
-app.use('/', require('./routes/index'));
-app.use('/problem', require('./routes/problem'));
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/', require('./routes/index'));
+app.use('/api/problem', require('./routes/problem'));
 
 // Start server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port: ${PORT}`);
 });

@@ -108,7 +108,7 @@ Judge0 is open-source software that compiles and runs code inside Docker contain
    ```
 
 4. Judge0 API will now be available at:  
-   `http://localhost:3000`
+   ``
 
 You can send a POST request to `/submissions` with source code to compile and run.
 
@@ -125,7 +125,7 @@ You can send a POST request to `/submissions` with source code to compile and ru
 ```js
 const axios = require('axios');
 
-const res = await axios.post('http://localhost:3000/submissions', {
+const res = await axios.post('/submissions', {
   source_code: "print('Hello, World!')",
   language_id: 71, // Python
   stdin: ""

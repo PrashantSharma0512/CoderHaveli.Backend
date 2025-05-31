@@ -144,89 +144,89 @@ const getEditorialById = async (req, res) => {
 };
 
 const run = async (req, res) => {
-  const { quesId, code, lang } = req.body;
+    const { quesId, code, lang } = req.body;
 
-  const Submission = nosql.model('Submission');
-  const TestCase = nosql.model('TestCase');
+    const Submission = nosql.model('Submission');
+    const TestCase = nosql.model('TestCase');
 
-  try {
-    // Save or update the submission
-    await Submission.updateOne(
-      { quesId },
-      { $set: { codelanguage: lang, code: code } },
-      { upsert: true }
-    );
-console.log(quesId);
+    try {
+        // Save or update the submission
 
-    // Fetch all test cases for the question
-    const testcases = await TestCase.find({ quesId });
+        console.log(quesId);
 
-    if (!testcases.length) return res.status(404).json({ error: 'No test cases found' });
+        // Fetch all test cases for the question
+        const testcases = await TestCase.find({ quesId });
 
-    // Language mapping (adjust based on Judge0's supported languages)
-    const langMap = {
-      'cpp': 54,
-      'c': 50,
-      'java': 62,
-      'python': 71,
-      'javascript': 63
-    };
+        if (!testcases.length) return res.status(404).json({ error: 'No test cases found' });
 
-    const language_id = langMap[lang.toLowerCase()];
-    if (!language_id) return res.status(400).json({ error: 'Unsupported language' });
+        // Language mapping (adjust based on Judge0's supported languages)
+        const langMap = {
+            'cpp': 54,
+            'c': 50,
+            'java': 62,
+            'python': 71,
+            'javascript': 63
+        };
 
-    const judgeURL = process.env.JUDGE0_URL || 'https://judge0-ce.p.rapidapi.com';
-    const headers = {
-      'Content-Type': 'application/json',
-      // If using public Judge0 RapidAPI:
-      'X-RapidAPI-Key': process.env.RAPIDAPI_KEY,
-      'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com'
-    };
+        const language_id = langMap[lang.toLowerCase()];
+        if (!language_id) return res.status(400).json({ error: 'Unsupported language' });
 
-    const results = [];
+        const judgeURL = process.env.JUDGE0_URL || 'https://judge0-ce.p.rapidapi.com';
+        const headers = {
+            'Content-Type': 'application/json',
+            'X-RapidAPI-Key': process.env.RAPIDAPI_KEY,
+            'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com'
+        };
 
-    // Loop over each test case
-    for (let test of testcases) {
-      const submissionPayload = {
-        source_code: code,
-        language_id,
-        stdin: test.input,
-        expected_output: test.output,
-        cpu_time_limit: test.timeLimit / 1000, // ms to seconds
-        memory_limit: test.memoryLimit * 1024 // MB to KB
-      };
+        const results = [];
 
-      // Send submission to Judge0
-      const { data: tokenData } = await axios.post(
-        `${judgeURL}/submissions?base64_encoded=false&wait=true`,
-        submissionPayload,
-        { headers }
-      );
+        // Loop over each test case
+        for (let test of testcases) {
+            const submissionPayload = {
+                source_code: code,
+                language_id,
+                stdin: test.input,
+                expected_output: test.output,
+                cpu_time_limit: test.timeLimit / 1000, // ms to seconds
+                memory_limit: test.memoryLimit * 1024 // MB to KB
+            };
 
-      const status = tokenData.status.description;
-      const output = tokenData.stdout?.trim();
-      const expected = test.output?.trim();
+            // Send submission to Judge0
+            const { data: tokenData } = await axios.post(
+                `${judgeURL}/submissions?base64_encoded=false&wait=true`,
+                submissionPayload,
+                { headers }
+            );
 
-      results.push({
-        input: test.input,
-        output,
-        expected,
-        status,
-        isCorrect: output === expected
-      });
+            const status = tokenData.status.description;
+            const output = tokenData.stdout?.trim();
+            const expected = test.output?.trim();
+
+            results.push({
+                input: test.input,
+                output,
+                expected,
+                status,
+                isCorrect: output === expected
+            });
+        }
+
+        const allPassed = results.every(r => r.isCorrect);
+        const message =  allPassed ? 'Accepted' : 'Wrong Answer'
+        await Submission.updateOne(
+            { quesId },
+            { $set: { codelanguage: lang, code: code , status : message } },
+            { upsert: true }
+        );
+        res.json({
+            message:message,
+            details: results
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal Server Error', err: err.message });
     }
-
-    const allPassed = results.every(r => r.isCorrect);
-
-    res.json({
-      message: allPassed ? 'Accepted' : 'Wrong Answer',
-      details: results
-    });
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
 };
 
 

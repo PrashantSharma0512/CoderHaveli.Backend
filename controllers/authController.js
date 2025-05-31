@@ -7,7 +7,7 @@ const register = async (req, res) => {
     try {
         const { name, email, phone, password, role } = req.body;
 
-        const Register = nosql.model('user');
+        const Register = nosql.model('User');
         const existingUser = await Register.findOne({ email });
         if (existingUser) {
             return res.status(400).json({ message: 'Email already registered' });
@@ -34,17 +34,16 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
     try {
-        const { email, password, role } = req.body;
-        const Register = nosql.model('register');
+        const { email, password } = req.body;
+        const Register = nosql.model('User');
         const user = await Register.findOne({ email, isDeleted: false });
         if (!user) {
             return res.status(404).json({ message: 'User not found or deleted' });
         }
-        if (user.role != role) {
-            return res.send('user role is incorrect ')
-        }
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const isMatch = await bcrypt.compare(hashedPassword, user.password);
+       
 
-        const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
@@ -54,7 +53,7 @@ const login = async (req, res) => {
             process.env.SECRET_KEY,
             { expiresIn: '1d' }
         );
-        
+
         res.status(200).json({ message: 'Login successful', token, role: user.role });
     } catch (error) {
         console.error('Error during login:', error);
