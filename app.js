@@ -29,13 +29,13 @@ app.use((req, res, next) => {
   next();
 });
 
-// app.use((req, res, next) => {
-//   console.log('Request Origin:', req.headers.origin);
-//   res.setHeader('Access-Control-Allow-Origin', '*');
-//   res.setHeader('Access-Control-Allow-Credentials', 'true');
-//   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-//   next();
-// });
+app.use((req, res, next) => {
+  console.log('Request Origin:', req.headers.origin);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  next();
+});
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
