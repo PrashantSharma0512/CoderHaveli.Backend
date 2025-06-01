@@ -7,7 +7,10 @@ const mongoConnect = require('./connection');
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: '*', // Add your domain here
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -26,8 +29,15 @@ app.use((req, res, next) => {
   next();
 });
 
-// Routes
+app.use((req, res, next) => {
+  console.log('Request Origin:', req.headers.origin);
+  res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  next();
+});
 
+// Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/', require('./routes/index'));
 app.use('/api/problem', require('./routes/problem'));
