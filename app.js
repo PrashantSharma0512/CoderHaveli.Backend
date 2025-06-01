@@ -6,14 +6,25 @@ const mongoConnect = require('./connection');
 
 const app = express();
 
-// Middleware
+const allowedOrigin = [
+  'https://coderhaveli.vercel.app',
+  'http://localhost:5173' // or 3000, etc., depending on your dev port
+];
+
 app.use(cors({
-  origin: '*', // Add your domain here
-  credentials: true
+  origin: allowedOrigin,
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+app.options('*', cors({
+  origin: allowedOrigin,
+  credentials: true
+}));
 // Connect to MongoDB
 mongoConnect(process.env.MONGO_URI)
   .then(() => console.log('Connected to MongoDB'))
@@ -29,13 +40,6 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use((req, res, next) => {
-  console.log('Request Origin:', req.headers.origin);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  next();
-});
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
