@@ -1,6 +1,8 @@
 const problemController = {}
 const axios = require('axios')
 
+
+
 const getAllProblems = async (req, res) => {
     try {
         const Problem = nosql.model('ProblemList');
@@ -11,7 +13,6 @@ const getAllProblems = async (req, res) => {
         return res.status(500).json({ error: error.message });
     }
 }
-
 
 const getProblemById = async (req, res) => {
     try {
@@ -144,88 +145,47 @@ const getEditorialById = async (req, res) => {
 };
 
 const run = async (req, res) => {
-    const { quesId, code, lang } = req.body;
-
-    const Submission = nosql.model('Submission');
-    const TestCase = nosql.model('TestCase');
-
     try {
-        // Save or update the submission
-
-        console.log(quesId);
-
-        // Fetch all test cases for the question
-        const testcases = await TestCase.find({ quesId });
-
+        const { quesId, lang, code, testcases } = req.body;
         if (!testcases.length) return res.status(404).json({ error: 'No test cases found' });
-
-        // Language mapping (adjust based on Judge0's supported languages)
         const langMap = {
-            'cpp': 54,
-            'c': 50,
-            'java': 62,
-            'python': 71,
-            'javascript': 63
+            java: 'java',
+            cpp: 'cpp',
+            python: 'py',
+            js: 'js',
+            javascript: 'js'
         };
-
-        const language_id = langMap[lang.toLowerCase()];
-        if (!language_id) return res.status(400).json({ error: 'Unsupported language' });
-
-        const judgeURL = process.env.JUDGE0_URL || 'https://judge0-ce.p.rapidapi.com';
-        const headers = {
-            'Content-Type': 'application/json',
-            'X-RapidAPI-Key': process.env.RAPIDAPI_KEY,
-            'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com'
+        const language = langMap[lang.toLowerCase()];
+        if (!language) return res.status(400).json({ error: 'Unsupported language' });
+        const compilerUrl = process.env.COMPILER || 'http://localhost:5000';
+        const config = {
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            withCredentials: true,
         };
-
         const results = [];
-
-        // Loop over each test case
-        for (let test of testcases) {
-            const submissionPayload = {
-                source_code: code,
-                language_id,
-                stdin: test.input,
-                expected_output: test.output,
-                cpu_time_limit: test.timeLimit / 1000, // ms to seconds
-                memory_limit: test.memoryLimit * 1024 // MB to KB
-            };
-
-            // Send submission to Judge0
-            const { data: tokenData } = await axios.post(
-                `${judgeURL}/submissions?base64_encoded=false&wait=true`,
-                submissionPayload,
-                { headers }
-            );
-
-            const status = tokenData.status.description;
-            const output = tokenData.stdout?.trim();
-            const expected = test.output?.trim();
-
-            results.push({
-                input: test.input,
-                output,
-                expected,
-                status,
-                isCorrect: output === expected
-            });
-        }
-
-        const allPassed = results.every(r => r.isCorrect);
-        const message =  allPassed ? 'Accepted' : 'Wrong Answer'
-        await Submission.updateOne(
-            { quesId },
-            { $set: { codelanguage: lang, code: code , status : message } },
-            { upsert: true }
+        console.log(compilerUrl, "compiler url");
+        
+        const res = await axios.post(
+            `${compilerUrl}/api/batch`, {
+            language: lang,
+            code: code,
+            testcases: testcases
+        },
+            config
         );
-        res.json({
-            message:message,
-            details: results
-        });
-
+        console.log("res", res.data);
+        
+        if (res.data.error) {
+            return res.status(400).json({ error: res.data.error });
+        }
+        if(res.data.isFullyPassed){
+            res.send('kk');
+        }
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: 'Internal Server Error', err: err.message });
+        res.status(500).send(err.message);
     }
 };
 
