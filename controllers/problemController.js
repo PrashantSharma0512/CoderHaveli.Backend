@@ -156,6 +156,7 @@ const run = async (req, res) => {
             javascript: 'js'
         };
         const language = langMap[lang.toLowerCase()];
+
         if (!language) return res.status(400).json({ error: 'Unsupported language' });
         const compilerUrl = process.env.COMPILER || 'http://localhost:5000';
         const config = {
@@ -163,11 +164,13 @@ const run = async (req, res) => {
                 'Content-Type': 'application/json',
             },
             withCredentials: true,
+            timeout: 10000,
         };
+        console.log("jffjf");
         const results = [];
         console.log(compilerUrl, "compiler url");
-        
-        const res = await axios.post(
+
+        const response = await axios.post(
             `${compilerUrl}/api/batch`, {
             language: lang,
             code: code,
@@ -175,18 +178,27 @@ const run = async (req, res) => {
         },
             config
         );
-        console.log("res", res.data);
-        
-        if (res.data.error) {
-            return res.status(400).json({ error: res.data.error });
+console.log(response,'response');
+
+        if (response.data.error) {
+            return res.status(400).json({ error: response.data.error });
         }
-        if(res.data.isFullyPassed){
-            res.send('kk');
-        }
+        return res.json(response.data);
     } catch (err) {
-        console.error(err);
-        res.status(500).send(err.message);
+        console.error('Error occurred:', err);
+        if (err.response) {
+            console.error('Response data:', err.response.data);
+            console.error('Response status:', err.response.status);
+            console.error('Response headers:', err.response.headers);
+        } else if (err.request) {
+            console.error('No response received:', err.request);
+        } else {
+            console.error('Error setting up request:', err.message);
+        }
+
+        res.status(500).send({ message: 'Internal Server Error', details: err.message });
     }
+
 };
 
 

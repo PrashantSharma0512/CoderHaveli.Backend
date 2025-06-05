@@ -18,7 +18,8 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
+
 app.use(express.urlencoded({ extended: false }));
 
 app.options('*', cors({
@@ -45,6 +46,7 @@ app.use((req, res, next) => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/', require('./routes/index'));
 app.use('/api/problem', require('./routes/problem'));
+
 
 // Start server
 const PORT = process.env.PORT || 3000;
