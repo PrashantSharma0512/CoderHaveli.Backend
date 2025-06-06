@@ -158,18 +158,17 @@ const run = async (req, res) => {
         const language = langMap[lang.toLowerCase()];
 
         if (!language) return res.status(400).json({ error: 'Unsupported language' });
-        const compilerUrl = process.env.COMPILER || 'http://localhost:5000';
+        const compilerUrl = process.env.COMPILER;
+
         const config = {
             headers: {
                 'Content-Type': 'application/json',
             },
             withCredentials: true,
-            timeout: 10000,
+            // timeout: 60000,
         };
-        console.log("jffjf");
         const results = [];
         console.log(compilerUrl, "compiler url");
-
         const response = await axios.post(
             `${compilerUrl}/api/batch`, {
             language: lang,

@@ -40,7 +40,9 @@ app.use((req, res, next) => {
   req.nosql = mongoose;
   next();
 });
-
+app.get('/', (req, res) => {
+  res.send('Hello from Render!');
+});
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
