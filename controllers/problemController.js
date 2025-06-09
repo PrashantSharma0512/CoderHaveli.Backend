@@ -209,6 +209,7 @@ const run = async (req, res) => {
         }
 
         const compilerUrl = 'https://coderhaveli-compiler.onrender.com';
+        // const compilerUrl = 'http://localhost:5000';
         
         const config = {
             headers: {
@@ -218,6 +219,7 @@ const run = async (req, res) => {
         };
 
         console.log(`Sending request to compiler: ${compilerUrl}/api/batch`);
+        console.log("p",testcases);
         
         const response = await axios.post(
             `${compilerUrl}/api/batch`,
@@ -228,7 +230,8 @@ const run = async (req, res) => {
             },
             config
         );
-
+        
+        console.log("pra",response.data);
         return res.json(response.data);
         
     } catch (err) {
@@ -265,6 +268,7 @@ const run = async (req, res) => {
         }
     }
 };
+
 
 
 problemController.getAllProblems = getAllProblems;
