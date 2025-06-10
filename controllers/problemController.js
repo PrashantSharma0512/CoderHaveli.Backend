@@ -144,83 +144,21 @@ const getEditorialById = async (req, res) => {
     }
 };
 
-// const run = async (req, res) => {
-//     try {
-//         const { quesId, lang, code, testcases } = req.body;
-//         if (!testcases.length) return res.status(404).json({ error: 'No test cases found' });
-//         const langMap = {
-//             java: 'java',
-//             cpp: 'cpp',
-//             python: 'py',
-//             js: 'js',
-//             javascript: 'js'
-//         };
-//         const language = langMap[lang.toLowerCase()];
-
-//         if (!language) return res.status(400).json({ error: 'Unsupported language' });
-//         const compilerUrl = process.env.COMPILER;
-
-//         const config = {
-//             headers: {
-//                 'Content-Type': 'application/json',
-//             },
-//             withCredentials: true,
-//             // timeout: 60000,
-//         };
-//         const results = [];
-//         console.log(compilerUrl, "compiler url");
-//         const response = await axios.post(
-//             `${compilerUrl}/api/batch`, {
-//             language: lang,
-//             code: code,
-//             testcases: testcases
-//         },
-//             config
-//         );
-// console.log(response,'response');
-
-//         if (response.data.error) {
-//             return res.status(400).json({ error: response.data.error });
-//         }
-//         return res.json(response.data);
-//     } catch (err) {
-//         console.error('Error occurred:', err);
-//         if (err.response) {
-//             console.error('Response data:', err.response.data);
-//             console.error('Response status:', err.response.status);
-//             console.error('Response headers:', err.response.headers);
-//         } else if (err.request) {
-//             console.error('No response received:', err.request);
-//         } else {
-//             console.error('Error setting up request:', err.message);
-//         }
-
-//         res.status(500).send({ message: 'Internal Server Error', details: err.message });
-//     }
-
-// };
 
 const run = async (req, res) => {
     try {
+        const Submission = nosql.model('Submission')
         const { lang, code, testcases } = req.body;
-        
         if (!testcases?.length) {
             return res.status(400).json({ error: 'No test cases provided' });
         }
-
-        const compilerUrl = 'https://coderhaveli-compiler.onrender.com';
-        // const compilerUrl = 'http://localhost:5000';
-        
+        const compilerUrl = process.env.COMPILER;
         const config = {
             headers: {
                 'Content-Type': 'application/json',
             },
             timeout: 25000, // 25 seconds timeout (Render free tier has 30s limit)
         };
-
-        console.log(`Sending request to compiler: ${compilerUrl}/api/batch`);
-        console.log("p",testcases);
-        
         const response = await axios.post(
             `${compilerUrl}/api/batch`,
             {
@@ -230,44 +168,119 @@ const run = async (req, res) => {
             },
             config
         );
-        
-        console.log("pra",response.data);
+        // const status = response.data.isFullyPassed === true ? 'Accepted' : 'Wrong Answer';
+
+        // await Submission.updateOne(
+        //     {
+        //         // user: req.user._id,
+        //         quesId: req.body.quesId
+        //     },
+        //     {
+        //         code: code,
+        //         codelanguage: lang,
+        //         status: status,
+        //         modifiedAt: new Date()
+        //     }, { upsert: true });
         return res.json(response.data);
-        
+
     } catch (err) {
         console.error('Compiler service error:', err);
-        
+
         if (err.response) {
             // The request was made and the server responded with a status code
             console.error('Response data:', err.response.data);
             console.error('Response status:', err.response.status);
-            
+
             if (err.response.status === 502) {
-                return res.status(503).json({ 
+                return res.status(503).json({
                     error: 'Compiler service unavailable',
                     details: 'The compiler service returned a 502 Bad Gateway error. Please check if it is running.'
                 });
             }
-            
+
             return res.status(err.response.status).json({
                 error: 'Compiler service error',
                 details: err.response.data
             });
         } else if (err.request) {
             // The request was made but no response was received
-            return res.status(504).json({ 
+            return res.status(504).json({
                 error: 'Compiler service timeout',
                 details: 'The compiler service did not respond in time'
             });
         } else {
             // Something happened in setting up the request
-            return res.status(500).json({ 
+            return res.status(500).json({
                 error: 'Internal server error',
-                details: err.message 
+                details: err.message
             });
         }
     }
 };
+
+const submit = async (req, res) => {
+    try {
+        const { lang, code } = req.body;
+        const Testcase = nosql.model('TestCase');
+        const testcases = await Testcase.find();
+        if (!testcases?.length) {
+            return res.status(400).json({ error: 'No test cases provided' });
+        }
+        const compilerUrl =process.env.COMPILER;
+        const config = {
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            timeout: 25000, 
+        };
+
+        const response = await axios.post(
+            `${compilerUrl}/api/batch`,
+            {
+                language: lang,
+                code: code,
+                testcases: testcases
+            },
+            config
+        );
+
+        console.log("pra", response.data);
+        return res.json(response.data);
+
+    } catch (err) {
+        console.error('Compiler service error:', err);
+
+        if (err.response) {
+            // The request was made and the server responded with a status code
+            console.error('Response data:', err.response.data);
+            console.error('Response status:', err.response.status);
+
+            if (err.response.status === 502) {
+                return res.status(503).json({
+                    error: 'Compiler service unavailable',
+                    details: 'The compiler service returned a 502 Bad Gateway error. Please check if it is running.'
+                });
+            }
+
+            return res.status(err.response.status).json({
+                error: 'Compiler service error',
+                details: err.response.data
+            });
+        } else if (err.request) {
+            // The request was made but no response was received
+            return res.status(504).json({
+                error: 'Compiler service timeout',
+                details: 'The compiler service did not respond in time'
+            });
+        } else {
+            // Something happened in setting up the request
+            return res.status(500).json({
+                error: 'Internal server error',
+                details: err.message
+            });
+        }
+    }
+}
 
 
 
@@ -275,4 +288,5 @@ problemController.getAllProblems = getAllProblems;
 problemController.getProblemById = getProblemById;
 problemController.getEditorialById = getEditorialById;
 problemController.run = run;
+problemController.submit = submit;
 module.exports = problemController;
