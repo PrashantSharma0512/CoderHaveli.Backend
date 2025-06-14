@@ -220,18 +220,18 @@ const run = async (req, res) => {
 
 const submit = async (req, res) => {
     try {
-        const { lang, code } = req.body;
+        const { quesId, lang, code } = req.body;
         const Testcase = nosql.model('TestCase');
-        const testcases = await Testcase.find();
+        const testcases = await Testcase.find({ quesId: quesId }, { input: 1, output: 1, });
         if (!testcases?.length) {
             return res.status(400).json({ error: 'No test cases provided' });
         }
-        const compilerUrl =process.env.COMPILER;
+        const compilerUrl = process.env.COMPILER;
         const config = {
             headers: {
                 'Content-Type': 'application/json',
             },
-            timeout: 25000, 
+            timeout: 25000,
         };
 
         const response = await axios.post(
