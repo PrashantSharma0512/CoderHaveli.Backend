@@ -1,8 +1,6 @@
 const problemController = {}
 const axios = require('axios')
 
-
-
 const getAllProblems = async (req, res) => {
     try {
         const Problem = nosql.model('ProblemList');
@@ -144,7 +142,6 @@ const getEditorialById = async (req, res) => {
     }
 };
 
-
 const run = async (req, res) => {
     try {
         const Submission = nosql.model('Submission')
@@ -281,8 +278,6 @@ const submit = async (req, res) => {
         }
     }
 }
-
-
 
 problemController.getAllProblems = getAllProblems;
 problemController.getProblemById = getProblemById;

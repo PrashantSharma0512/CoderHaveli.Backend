@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+// const bcrypt = require('bcryptjs');
 
 module.exports = (nosql) => ({
     User: nosql.model(
@@ -7,7 +7,10 @@ module.exports = (nosql) => ({
         new nosql.Schema({
             name: { type: String, required: true, default: '' },
             email: { type: String, required: true, unique: true },
-            password: { type: String, required: true, set: (v) => bcrypt.hashSync(v, bcrypt.genSaltSync(10)) },
+            password: {
+                type: String, required: true,
+                //  set: (v) => bcrypt.hashSync(v, bcrypt.genSaltSync(10)) 
+            },
             role: { type: String, required: true },
             isDeleted: { type: Boolean, default: false },
             createdAt: { type: Date, default: Date.now },
@@ -83,7 +86,7 @@ module.exports = (nosql) => ({
             input: { type: String, required: true },
             output: { type: String, required: true },
             explaination: { type: String, default: '' },
-            timeLimit: { type: Number, default: 1000 }, 
+            timeLimit: { type: Number, default: 1000 },
             memoryLimit: { type: Number, default: 256 },
         })
     ),
