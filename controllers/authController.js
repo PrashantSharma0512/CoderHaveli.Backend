@@ -72,19 +72,19 @@ const login = async (req, res) => {
         await user.save();
 // for server
         // Set refresh token in HTTP-only cookie
-        // res.cookie('refreshToken', refreshToken, {
-        //     httpOnly: true,
-        //     secure: process.env.NODE_ENV === 'production',
-        //     sameSite: 'none',
-        //     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-        // });
-//for local testing 
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
-            secure: false,           // false on localhost; true in production with HTTPS
-            sameSite: 'lax',         // or 'none' if your frontend and backend are on different domains + secure:true
-            maxAge: 7 * 24 * 60 * 60 * 1000,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'none',
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         });
+//for local testing 
+        // res.cookie('refreshToken', refreshToken, {
+        //     httpOnly: true,
+        //     secure: false,           // false on localhost; true in production with HTTPS
+        //     sameSite: 'lax',         // or 'none' if your frontend and backend are on different domains + secure:true
+        //     maxAge: 7 * 24 * 60 * 60 * 1000,
+        // });
         res.status(200).json({
             accessToken,
             user: {
