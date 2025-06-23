@@ -1,9 +1,9 @@
 const problemController = {}
 const axios = require('axios')
-
+const mongoose = require('mongoose')
 const getAllProblems = async (req, res) => {
     try {
-        const Problem = nosql.model('ProblemList');
+        const Problem = mongoose.model('ProblemList');
         const problems = await Problem.find({}, { _id: 1, quesName: 1, difficulty: 1, tags: 1 });
         res.json(problems);
     } catch (error) {
@@ -14,15 +14,15 @@ const getAllProblems = async (req, res) => {
 
 const getProblemById = async (req, res) => {
     try {
-        const Problem = nosql.model('ProblemList');
+        const Problem = mongoose.model('ProblemList');
         const { id } = req.params;
 
-        if (!nosql.Types.ObjectId.isValid(id)) {
+        if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ error: "Invalid problem ID format" });
         }
         const getProblem = await Problem.aggregate([
             {
-                $match: { _id: new nosql.Types.ObjectId(id) }
+                $match: { _id: new mongoose.Types.ObjectId(id) }
             },
             {
                 $lookup: {
@@ -90,8 +90,8 @@ const getProblemById = async (req, res) => {
 const getEditorialById = async (req, res) => {
     try {
         const { id } = req.params;
-        const ProblemList = nosql.model('ProblemList');
-        const Approaches = nosql.model('Approaches');
+        const ProblemList = mongoose.model('ProblemList');
+        const Approaches = mongoose.model('Approaches');
 
         const quesIndex = await ProblemList.findOne({ _id: id }, { quesId: 1 });
         if (!quesIndex) {
@@ -144,7 +144,7 @@ const getEditorialById = async (req, res) => {
 
 const run = async (req, res) => {
     try {
-        const Submission = nosql.model('Submission')
+        const Submission = mongoose.model('Submission')
         const { lang, code, testcases } = req.body;
         if (!testcases?.length) {
             return res.status(400).json({ error: 'No test cases provided' });
@@ -218,7 +218,7 @@ const run = async (req, res) => {
 const submit = async (req, res) => {
     try {
         const { quesId, lang, code } = req.body;
-        const Testcase = nosql.model('TestCase');
+        const Testcase = mongoose.model('TestCase');
         const testcases = await Testcase.find({ quesId: quesId }, { input: 1, output: 1, });
         if (!testcases?.length) {
             return res.status(400).json({ error: 'No test cases provided' });

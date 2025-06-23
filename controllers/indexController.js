@@ -1,8 +1,53 @@
 const indexController = {}
+const mongoose = require('mongoose')
 
+const Profile = async (req, res) => {
+    try {
+        const { id } = req.query;
+
+        // Validate ID
+        if (!id) {
+            return res.status(400).json({
+                success: false,
+                message: 'User ID is required'
+            });
+        }
+
+        // Validate MongoDB ID format if needed
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid user ID format'
+            });
+        }
+
+        const User = mongoose.model('User');
+        const user = await User.findOne({ _id: id }).select('-password -refreshToken'); // Exclude sensitive fields
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            user
+        });
+
+    } catch (error) {
+        console.error('Profile API Error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+            error: error.message
+        });
+    }
+}
 const getCourseData = async (req, res) => {
     try {
-        const Course = nosql.model('Course');
+        const Course = mongoose.model('Course');
 
         const courseData = await Course.aggregate([
             {
@@ -57,7 +102,7 @@ const getCourseData = async (req, res) => {
 };
 const getCarouselData = async (req, res) => {
     try {
-        const Image = nosql.model('Image');
+        const Image = mongoose.model('Image');
 
         const carouselData = await Image.find({ imageType: 'carousel' }, { url: 1, _id: 0 });
 
@@ -68,9 +113,9 @@ const getCarouselData = async (req, res) => {
     }
 };
 
-const getCardData = async (req, res) => {
+const getTutorialData = async (req, res) => {
     try {
-        const Tutorial = nosql.model('Tutorial');
+        const Tutorial = mongoose.model('Tutorial');
         const tutorialData = await Tutorial.aggregate([
             {
                 $lookup: {
@@ -129,7 +174,7 @@ const getCardData = async (req, res) => {
 
 const getProblemData = async (req, res) => {
     try {
-        const ProblemList = nosql.model('ProblemList');
+        const ProblemList = mongoose.model('ProblemList');
 
         const problemData = await ProblemList.aggregate([
             {
@@ -195,7 +240,7 @@ const getProblemData = async (req, res) => {
 
 const getInstructorData = async (req, res) => {
     try {
-        const Instructor = nosql.model('Instructor');
+        const Instructor = mongoose.model('Instructor');
         const instructorData = await Instructor.find({}, { name: 1, email: 1, bio: 1 });
         res.json(instructorData);
     } catch (error) {
@@ -206,7 +251,7 @@ const getInstructorData = async (req, res) => {
 
 const getCategoryData = async (req, res) => {
     try {
-        const Category = nosql.model('Category');
+        const Category = mongoose.model('Category');
         const categoryData = await Category.find({}, { name: 1 });
         res.json(categoryData);
     } catch (error) {
@@ -221,9 +266,10 @@ const getCategoryData = async (req, res) => {
 
 indexController.getCourseData = getCourseData;
 indexController.getCarouselData = getCarouselData;
-indexController.getCardData = getCardData;
+indexController.getTutorialData = getTutorialData;
 indexController.getInstructorData = getInstructorData;
 indexController.getCategoryData = getCategoryData;
 indexController.getProblemData = getProblemData;
+indexController.Profile = Profile;
 
 module.exports = indexController;

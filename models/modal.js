@@ -1,73 +1,75 @@
 const mongoose = require('mongoose');
 // const bcrypt = require('bcryptjs');
 
-module.exports = (nosql) => ({
-    User: nosql.model(
+module.exports = (mongoose) => ({
+    User: mongoose.model(
         'User',
-        new nosql.Schema({
+        new mongoose.Schema({
             name: { type: String, required: true, default: '' },
             email: { type: String, required: true, unique: true },
             password: {
                 type: String, required: true,
-                //  set: (v) => bcrypt.hashSync(v, bcrypt.genSaltSync(10)) 
             },
             role: { type: String, required: true },
+            bio:{type:String, default:''},
             isDeleted: { type: Boolean, default: false },
             createdAt: { type: Date, default: Date.now },
-            modifiedAt: { type: Date, default: Date.now }
+            modifiedAt: { type: Date, default: Date.now },
+            refreshToken: { type: String },
+            avatar: { type: String, required: true},
         })
     ),
-    Image: nosql.model(
+    Image: mongoose.model(
         'Image',
-        new nosql.Schema({
+        new mongoose.Schema({
             imageId: { type: Number, required: true, unique: true },
             url: { type: String, required: true },
             imageType: { type: String, required: true },
             uploadedAt: { type: Date, default: Date.now },
         })
     ),
-    Course: nosql.model(
+    Course: mongoose.model(
         'Course',
-        new nosql.Schema({
+        new mongoose.Schema({
             title: { type: String, required: true },
             description: { type: String, required: true },
-            image: { type: nosql.Schema.Types.ObjectId, required: true, ref: 'Image' },
+            image: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Image' },
             price: Number,
             duration: String,
-            instructor: { type: nosql.Schema.Types.ObjectId, ref: 'Instructor' },
-            category: { type: nosql.Schema.Types.ObjectId, ref: 'Category' },
+            instructor: { type: mongoose.Schema.Types.ObjectId, ref: 'Instructor' },
+            category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
             createdAt: { type: Date, default: Date.now },
             modifiedAt: { type: Date, default: Date.now }
         })
     ),
-    Tutorial: nosql.model('Tutorial', new nosql.Schema({
+    Tutorial: mongoose.model('Tutorial', new mongoose.Schema({
         title: { type: String, required: true },
         description: { type: String, required: true },
-        image: { type: nosql.Schema.Types.ObjectId, required: true, ref: 'Image' },
-        instructor: { type: nosql.Schema.Types.ObjectId, ref: 'Instructor' },
-        category: { type: nosql.Schema.Types.ObjectId, ref: 'Category' },
+        image: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Image' },
+        instructor: { type: mongoose.Schema.Types.ObjectId, ref: 'Instructor' },
+        category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
         createdAt: { type: Date, default: Date.now },
         modifiedAt: { type: Date, default: Date.now }
     })),
-    Instructor: nosql.model(
+    Instructor: mongoose.model(
         'Instructor',
-        new nosql.Schema({
+        new mongoose.Schema({
             name: { type: String, required: true },
             email: { type: String, required: true },
             bio: String,
-            image: { type: nosql.Schema.Types.ObjectId, ref: 'Image' },
+            image: { type: mongoose.Schema.Types.ObjectId, ref: 'Image' },
             createdAt: { type: Date, default: Date.now }
         })
     ),
-    Category: nosql.model(
+    Category: mongoose.model(
         'Category',
-        new nosql.Schema({
+        new mongoose.Schema({
             name: { type: String, required: true }
         })
     ),
-    Code: nosql.model(
+    Code: mongoose.model(
         'Code',
-        new nosql.Schema({
+        new mongoose.Schema({
             quesId: { type: String, required: true },
             quesName: { type: String, required: true },
             code: { type: String, required: true },
@@ -79,9 +81,9 @@ module.exports = (nosql) => ({
             modifiedAt: { type: Date, default: Date.now }
         })
     ),
-    TestCase: nosql.model(
+    TestCase: mongoose.model(
         'TestCase',
-        new nosql.Schema({
+        new mongoose.Schema({
             quesId: { type: String, required: true },
             input: { type: String, required: true },
             output: { type: String, required: true },
@@ -90,63 +92,63 @@ module.exports = (nosql) => ({
             memoryLimit: { type: Number, default: 256 },
         })
     ),
-    ProblemList: nosql.model(
+    ProblemList: mongoose.model(
         'ProblemList',
-        new nosql.Schema({
+        new mongoose.Schema({
             quesId: { type: String, required: true },
             quesName: { type: String, required: true },
             quesDesc: { type: String, required: true },
             difficulty: { type: String, required: true, enum: ['Easy', 'Medium', 'Hard'] },
-            problemExample: { type: nosql.Schema.Types.ObjectId, ref: 'ProblemExample' },
-            code: [{ type: nosql.Schema.Types.ObjectId, ref: 'Code' }],
-            contraints: { type: nosql.Schema.Types.ObjectId, ref: 'Contraints' },
+            problemExample: { type: mongoose.Schema.Types.ObjectId, ref: 'ProblemExample' },
+            code: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Code' }],
+            contraints: { type: mongoose.Schema.Types.ObjectId, ref: 'Contraints' },
             tags: [{ type: String, default: null }],
             createdAt: { type: Date, default: Date.now },
             modifiedAt: { type: Date, default: Date.now }
         })
     ),
-    // ProblemExample: nosql.model(
+    // ProblemExample: mongoose.model(
     //     'ProblemExample',
-    //     new nosql.Schema({
+    //     new mongoose.Schema({
     //         quesId: { type: String, required: true },
     //         input: { type: String, required: true },
     //         output: { type: String, required: true },
 
     //     })
     // ),
-    Constraints: nosql.model(
+    Constraints: mongoose.model(
         'Constraints',
-        new nosql.Schema({
+        new mongoose.Schema({
             quesId: { type: String, required: true },
             contraints: { type: [String], required: true }
         })
     ),
-    hint: nosql.model(
+    hint: mongoose.model(
         'Hint',
-        new nosql.Schema({
+        new mongoose.Schema({
             quesId: { type: String, required: true },
             hints: [{ type: String, required: true }]
         })
     ),
-    Submissions: nosql.model(
+    Submissions: mongoose.model(
         'Submission',
-        new nosql.Schema({
+        new mongoose.Schema({
             quesId: { type: String, required: true },
             code: { type: String, required: true },
             codelanguage: { type: String, required: true },
-            userID: { type: nosql.Schema.Types.ObjectId, required: true, ref: 'User' },
+            userID: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
             status: { type: String, required: true, enum: ['Accepted', 'Wrong Answer', 'Time Limit Exceeded', 'Runtime Error', 'Compilation Error'], default: '' },
             createdAt: { type: Date, default: Date.now },
             modifiedAt: { type: Date, default: Date.now }
         })
     ),
-    // Approaches: nosql.model(
+    // Approaches: mongoose.model(
     //     'Approaches',
-    //     new nosql.Schema({
+    //     new mongoose.Schema({
     //         quesId: { type: String, required: true },
     //         approachDesc: { type: String, required: true },
     //         approachType: { type: String, required: true, enum: ['Brute Force', 'Improved', 'Optimised'] },
-    //         code: { type: nosql.Schema.Types.ObjectId, ref: 'Code' },
+    //         code: { type: mongoose.Schema.Types.ObjectId, ref: 'Code' },
     //         approachName: { type: String },
     //         time_complexity: { type: String, default: null },
     //         space_complexity: { type: String, default: null },
@@ -157,9 +159,9 @@ module.exports = (nosql) => ({
     // ),
 
     //new schema for approach
-    Approaches: nosql.model(
+    Approaches: mongoose.model(
         'Approaches',
-        new nosql.Schema({
+        new mongoose.Schema({
             quesId: { type: String, required: true },
             approachName: { type: String },
             approachDesc: { type: String, required: true },
@@ -183,9 +185,9 @@ module.exports = (nosql) => ({
         })
     ),
 
-    Progess: nosql.model(
+    Progess: mongoose.model(
         'Progess',
-        new nosql.Schema({
+        new mongoose.Schema({
             quesId: { type: String, required: true },
             userID: { type: String, required: true },
             progress: { type: String, required: true },
@@ -193,14 +195,14 @@ module.exports = (nosql) => ({
             modifiedAt: { type: Date, default: Date.now }
         })
     ),
-    Community: nosql.model(
+    Community: mongoose.model(
         'Community',
-        new nosql.Schema({
-            problem: { type: nosql.Schema.Types.ObjectId, ref: 'ProblemList', required: true },
-            author: { type: nosql.Schema.Types.ObjectId, ref: 'User', required: true },
+        new mongoose.Schema({
+            problem: { type: mongoose.Schema.Types.ObjectId, ref: 'ProblemList', required: true },
+            author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
             question: { type: String, required: true },
             answers: [{
-                author: { type: nosql.Schema.Types.ObjectId, ref: 'User' },
+                author: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
                 answer: String,
                 createdAt: { type: Date, default: Date.now }
             }],
