@@ -17,7 +17,7 @@ const register = async (req, res) => {
             email,
             password: hashedPassword,
             role: role || 'user',
-            //avatar: avatar || 'default-avatar.png' // Provide a default avatar if none specified
+            avatar: avatar || 'default-avatar.png' // Provide a default avatar if none specified
         });
 
         await newUser.save();
@@ -40,7 +40,7 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, rememberMe } = req.body;
         const User = mongoose.model('User');
 
         const user = await User.findOne({ email, isDeleted: false });
@@ -53,38 +53,40 @@ const login = async (req, res) => {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
+        // Token expiration logic
+        const accessTokenExpiry = rememberMe ? '7d' : '15m';
+        const refreshTokenExpiry = rememberMe ? '30d' : '7d';
+        const refreshTokenMaxAge = rememberMe
+            ? 30 * 24 * 60 * 60 * 1000 // 30 days
+            : 7 * 24 * 60 * 60 * 1000; // 7 days
+
         // Generate tokens
         const accessToken = jwt.sign(
             { userId: user._id, role: user.role },
             process.env.ACCESS_SECRET,
-            { expiresIn: '15m' }
+            { expiresIn: accessTokenExpiry }
         );
 
         const refreshToken = jwt.sign(
             { userId: user._id },
             process.env.REFRESH_SECRET,
-            { expiresIn: '7d' }
+            { expiresIn: refreshTokenExpiry }
         );
 
         // Update user with refresh token
         user.refreshToken = refreshToken;
         user.modifiedAt = new Date();
         await user.save();
-// for server
+
         // Set refresh token in HTTP-only cookie
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'none',
-            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            maxAge: refreshTokenMaxAge
         });
-//for local testing 
-        // res.cookie('refreshToken', refreshToken, {
-        //     httpOnly: true,
-        //     secure: false,           // false on localhost; true in production with HTTPS
-        //     sameSite: 'lax',         // or 'none' if your frontend and backend are on different domains + secure:true
-        //     maxAge: 7 * 24 * 60 * 60 * 1000,
-        // });
+
+        // Send access token and user info
         res.status(200).json({
             accessToken,
             user: {
@@ -101,6 +103,7 @@ const login = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
 
 // const checkAuth = (req, res) => {
 //     try {
