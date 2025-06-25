@@ -3,8 +3,9 @@ const mongoose = require('mongoose')
 
 const Profile = async (req, res) => {
     try {
+        
         const { id } = req.query;
-
+        
         // Validate ID
         if (!id) {
             return res.status(400).json({

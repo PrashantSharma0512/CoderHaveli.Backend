@@ -11,12 +11,13 @@ module.exports = (mongoose) => ({
                 type: String, required: true,
             },
             role: { type: String, required: true },
-            bio:{type:String, default:''},
+            bio: { type: String, default: '' },
             isDeleted: { type: Boolean, default: false },
             createdAt: { type: Date, default: Date.now },
             modifiedAt: { type: Date, default: Date.now },
             refreshToken: { type: String },
-            avatar: { type: String, required: true},
+            avatar: { type: String, required: true },
+            username: { type: String, unique: true, default: 'username' }
         })
     ),
     Image: mongoose.model(

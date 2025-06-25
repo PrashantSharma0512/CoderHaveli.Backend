@@ -1,6 +1,9 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose')
+
+
+
 const register = async (req, res) => {
     try {
         const { name, email, password, role } = req.body;
@@ -104,33 +107,9 @@ const login = async (req, res) => {
     }
 };
 
-
-// const checkAuth = (req, res) => {
-//     try {
-
-//         const token = req.cookies.token;
-
-
-//         if (!token) {
-//             return res.status(401).json({ isAuthenticated: false, message: 'No token' });
-//         }
-
-//         const decoded = jwt.verify(token, process.env.SECRET_KEY);
-//         return res.status(200).json({
-//             isAuthenticated: true,
-//             userId: decoded.userId,
-//             role: decoded.role
-//         });
-
-//     } catch (error) {
-//         return res.status(401).json({ isAuthenticated: false, message: 'Invalid or expired token' });
-//     }
-// };
-
 const refresh = async (req, res) => {
 
     const { refreshToken } = req.cookies;
-    console.log(refreshToken);
     if (!refreshToken) return res.sendStatus(401);
 
     try {
@@ -210,7 +189,8 @@ const logout = async (req, res) => {
 };
 
 module.exports = {
-    register, login,
-    //  checkAuth, 
-    logout, refresh
+    register,
+    login,
+    logout,
+    refresh
 };
