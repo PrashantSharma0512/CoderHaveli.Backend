@@ -17,7 +17,7 @@ module.exports = (mongoose) => ({
             modifiedAt: { type: Date, default: Date.now },
             refreshToken: { type: String },
             avatar: { type: String, default: "https://th.bing.com/th/id/OIP.18ygnwZ7ZIBpWdtoy6cG1QHaHk?o=7rm=3&rs=1&pid=ImgDetMain&cb=idpwebpc2" },
-            username: { type: String, unique: true, default: 'username' }
+            username: { type: String, unique: true,}
         })
     ),
     Image: mongoose.model(

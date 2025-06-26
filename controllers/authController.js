@@ -2,6 +2,28 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose')
 
+const generateUserName = async (name) => {
+    const User = mongoose.model('User');
+
+    const baseUsername = name.toLowerCase().replace(/\s+/g, '');
+
+    const regex = new RegExp(`^${baseUsername}\\d*$`, 'i');
+    const existingUsers = await User.find({ username: regex }).select('username');
+
+    const existingUsernames = new Set(existingUsers.map(u => u.username.toLowerCase()));
+
+    if (!existingUsernames.has(baseUsername)) {
+        return baseUsername;
+    }
+
+    // Efficiently find the next available numbered username
+    let counter = 1;
+    while (existingUsernames.has(`${baseUsername}${counter}`)) {
+        counter++;
+    }
+
+    return `${baseUsername}${counter}`;
+};
 
 
 const register = async (req, res) => {
@@ -13,13 +35,14 @@ const register = async (req, res) => {
         if (existingUser) {
             return res.status(400).json({ message: 'Email already registered' });
         }
-
+        const username = await generateUserName(name);
         const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = new User({
             name,
             email,
             password: hashedPassword,
             role: role || 'user',
+            username,
         });
 
         await newUser.save();
@@ -30,6 +53,7 @@ const register = async (req, res) => {
                 name: newUser.name,
                 email: newUser.email,
                 role: newUser.role,
+                username: newUser.username
             }
         });
 
