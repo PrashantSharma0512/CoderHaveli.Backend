@@ -20,7 +20,6 @@ const register = async (req, res) => {
             email,
             password: hashedPassword,
             role: role || 'user',
-            avatar: avatar || 'default-avatar.png' // Provide a default avatar if none specified
         });
 
         await newUser.save();
@@ -31,7 +30,6 @@ const register = async (req, res) => {
                 name: newUser.name,
                 email: newUser.email,
                 role: newUser.role,
-                avatar: newUser.avatar
             }
         });
 
