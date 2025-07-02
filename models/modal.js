@@ -17,7 +17,9 @@ module.exports = (mongoose) => ({
             modifiedAt: { type: Date, default: Date.now },
             refreshToken: { type: String },
             avatar: { type: String, default: "https://th.bing.com/th/id/OIP.18ygnwZ7ZIBpWdtoy6cG1QHaHk?o=7rm=3&rs=1&pid=ImgDetMain&cb=idpwebpc2" },
-            username: { type: String, unique: true,}
+            username: { type: String, unique: true },
+            resetOtp: { type: String },
+            resetOtpExpiry: { type: Date }
         })
     ),
     Image: mongoose.model(
@@ -72,12 +74,10 @@ module.exports = (mongoose) => ({
         'Code',
         new mongoose.Schema({
             quesId: { type: String, required: true },
+            userId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
             quesName: { type: String, required: true },
             code: { type: String, required: true },
-            codinglanguage: { type: String, required: true },
-            complexityType: { type: String, required: true, enum: ['Brute Force', 'Optimised', 'Most Optimised'] },
-            time_complexity: { type: String, default: null },
-            space_complexity: { type: String, default: null },
+            codelanguage: { type: String, required: true },
             createdAt: { type: Date, default: Date.now },
             modifiedAt: { type: Date, default: Date.now }
         })
@@ -137,7 +137,7 @@ module.exports = (mongoose) => ({
             quesId: { type: String, required: true },
             code: { type: String, required: true },
             codelanguage: { type: String, required: true },
-            userID: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
+            userId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
             status: { type: String, required: true, enum: ['Accepted', 'Wrong Answer', 'Time Limit Exceeded', 'Runtime Error', 'Compilation Error'], default: '' },
             createdAt: { type: Date, default: Date.now },
             modifiedAt: { type: Date, default: Date.now }

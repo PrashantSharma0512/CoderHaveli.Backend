@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose')
-
+const transporter = require('../utils/Mailer');
 const generateUserName = async (name) => {
     const User = mongoose.model('User');
 
@@ -210,9 +210,86 @@ const logout = async (req, res) => {
     }
 };
 
+const forgetPassword = async (req, res) => {
+    const { email } = req.body;
+    try {
+        const User = mongoose.model('User')
+        const user = await User.findOne({ email });
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Save OTP & expiry in user document
+        user.resetOtp = otp;
+        user.resetOtpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+        await user.save();
+
+        // Send Email
+        await transporter.sendMail({
+            from: process.env.MAIL_USER,
+            to: email,
+            subject: "Your OTP for password reset",
+            html: `<h2>Your OTP is: <strong>${otp}</strong></h2><p>Valid for 10 minutes.</p>`,
+        });
+
+        res.status(200).json({ message: "OTP sent successfully!" });
+    } catch (error) {
+        console.error("Error in forgetPassword:", error);
+        res.status(500).json({ message: "Something went wrong!" });
+    }
+};
+const verifyOTP = async (req, res) => {
+    const User = mongoose.model('User')
+    try {
+        const { email, otp } = req.body;
+        const user = await User.findOne({ email });
+        if (!user || !user.resetOtp || !user.resetOtpExpiry) {
+            return res.status(400).json({ message: "OTP not found. Request again." });
+        }
+
+        if (user.resetOtp !== otp || user.resetOtpExpiry < Date.now()) {
+            return res.status(400).json({ message: "Invalid or expired OTP" });
+        }
+
+        res.status(200).json({ message: "OTP verified successfully" });
+    } catch (error) {
+        console.error("Error in verifyOTP:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+
+
+
+const resetPassword = async (req, res) => {
+    const { email, newPassword } = req.body;
+    const User = mongoose.model('User')
+    try {
+        const user = await User.findOne({ email });
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        user.password = hashedPassword;
+
+        // Clear OTP fields
+        user.resetOtp = undefined;
+        user.resetOtpExpiry = undefined;
+
+        await user.save();
+
+        res.status(200).json({ message: "Password reset successfully" });
+    } catch (error) {
+        console.error("Error in resetPassword:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
 module.exports = {
     register,
     login,
     logout,
-    refresh
+    refresh,
+    forgetPassword,
+    verifyOTP,
+    resetPassword
 };

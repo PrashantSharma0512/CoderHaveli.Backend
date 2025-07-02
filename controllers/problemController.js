@@ -98,30 +98,6 @@ const getEditorialById = async (req, res) => {
             return res.status(404).json({ message: "Problem not found" });
         }
 
-
-        // const data = await Approaches.aggregate([
-        //     {
-        //         $lookup: {
-        //             from: 'problemlists',
-        //             localField: 'quesId',
-        //             foreignField: 'quesIndex.quesId',
-        //             as: 'approachesData'
-        //         }
-        //     },
-        //     {
-        //         $unwind: '$approachesData'
-        //     },
-        //     {
-        //         $project: {
-        //             approachDesc: 1,
-        //             approachType: 1,
-        //             code: 1,
-        //             time_complexity: 1,
-        //             space_complexity: 1,
-        //         }
-        //     }
-        // ])
-
         const data = await Approaches.find(
             { quesId: quesIndex.quesId },
             {
@@ -145,7 +121,8 @@ const getEditorialById = async (req, res) => {
 const run = async (req, res) => {
     try {
         const Submission = mongoose.model('Submission')
-        const { lang, code, testcases } = req.body;
+        const Code = mongoose.model('Code')
+        const { lang, code, testcases, quesId, userId } = req.body;
         if (!testcases?.length) {
             return res.status(400).json({ error: 'No test cases provided' });
         }
@@ -165,19 +142,34 @@ const run = async (req, res) => {
             },
             config
         );
-        // const status = response.data.isFullyPassed === true ? 'Accepted' : 'Wrong Answer';
+        const status = response.data.isFullyPassed === true ? 'Accepted' : 'Wrong Answer';
+        const codeData = await Code.updateOne(
+            { userId: userId, quesId: quesId },
+            {
+                $set:
+                {
+                    code: code,
+                    quesId: quesId,
+                    codelanguage: lang,
+                    modifiedAt: new Date()
+                },
+            },
+            {
+                upsert: true,
+            }
+        )
+        await Submission.updateOne(
+            {
+                userId: userId,
+                quesId: quesId
+            },
+            {
+                code: new mongoose.Types.ObjectId(codeData.upsertedId),
+                codelanguage: lang,
+                status: status,
+                modifiedAt: new Date()
+            }, { upsert: true });
 
-        // await Submission.updateOne(
-        //     {
-        //         // user: req.user._id,
-        //         quesId: req.body.quesId
-        //     },
-        //     {
-        //         code: code,
-        //         codelanguage: lang,
-        //         status: status,
-        //         modifiedAt: new Date()
-        //     }, { upsert: true });
         return res.json(response.data);
 
     } catch (err) {
