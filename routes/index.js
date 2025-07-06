@@ -2,6 +2,7 @@ const router = require('express').Router();
 const index = require('../controllers/indexController');
 
 router.get('/get-profile', index.Profile);
+router.post('update-profile',index.updateProfile)
 router.get('/get-courses', index.getCourseData);
 router.get('/get-carousel', index.getCarouselData);
 router.get('/get-tutorial', index.getTutorialData);

@@ -3,9 +3,9 @@ const mongoose = require('mongoose')
 
 const Profile = async (req, res) => {
     try {
-        
+
         const { id } = req.query;
-        
+
         // Validate ID
         if (!id) {
             return res.status(400).json({
@@ -44,6 +44,14 @@ const Profile = async (req, res) => {
             message: 'Internal server error',
             error: error.message
         });
+    }
+}
+const updateProfile = async (req, res) => {
+    try {
+        const { } = req.body
+    } catch (error) {
+        console.log(error, "error in update profile");
+        return res.status(500).json({ error: 'Internal Server Error' });
     }
 }
 const getCourseData = async (req, res) => {
@@ -272,5 +280,6 @@ indexController.getInstructorData = getInstructorData;
 indexController.getCategoryData = getCategoryData;
 indexController.getProblemData = getProblemData;
 indexController.Profile = Profile;
+indexController.updateProfile = updateProfile;
 
 module.exports = indexController;
