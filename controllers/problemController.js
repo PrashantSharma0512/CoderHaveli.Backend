@@ -271,9 +271,26 @@ const submit = async (req, res) => {
     }
 }
 
+const getSubmission = async (req, res) => {
+    console.log("first");
+    try {
+
+
+        const { id, quesId } = req.query;
+        const Submission = mongoose.model('Submission');
+        const submission = Submission.find({ $and: [{ userId: new Types.ObjectId(id) }, { quesId: quesId }] }, { status, execution_time, createdAt, codelanguage })
+        console.log(submission);
+        res.status(200).json(submission)
+    } catch (error) {
+        console.log("error in getting submission", error);
+        res.status(500).send('Internal server error');
+    }
+}
+
 problemController.getAllProblems = getAllProblems;
 problemController.getProblemById = getProblemById;
 problemController.getEditorialById = getEditorialById;
 problemController.run = run;
 problemController.submit = submit;
+problemController.getSubmission = getSubmission;
 module.exports = problemController;

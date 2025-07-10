@@ -1,6 +1,7 @@
 const indexController = {}
-const mongoose = require('mongoose')
-
+const mongoose = require('mongoose');
+const { uploadToCloudinary } = require('../utils/Upload');
+const fs = require('fs')
 const Profile = async (req, res) => {
     try {
 
@@ -48,12 +49,58 @@ const Profile = async (req, res) => {
 }
 const updateProfile = async (req, res) => {
     try {
-        const { } = req.body
+        const User = mongoose.model('User');
+        const { name, bio, phone, id } = req.body;
+
+        // Debugging logs
+        console.log('Request body:', req.body);
+        console.log('Uploaded file:', req.file);
+
+        if (!id) {
+            return res.status(400).json({ error: 'User ID is required' });
+        }
+
+        const updateData = { name, bio, phone };
+
+        // Only process avatar if file was uploaded
+        if (req.file) {
+            try {
+                const uploadResult = await uploadToCloudinary(req.file.path);
+                updateData.avatar = uploadResult.secure_url;
+
+                // Clean up temp file
+                fs.unlinkSync(req.file.path);
+            } catch (uploadError) {
+                console.error('Cloudinary upload failed:', uploadError);
+                if (req.file?.path) fs.unlinkSync(req.file.path);
+                throw uploadError;
+            }
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+            id,
+            { $set: updateData },
+            { new: true, runValidators: true }
+        ).select('-password');
+
+        if (!updatedUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        res.status(200).json({
+            user: updatedUser,
+            message: "Profile updated successfully"
+        });
+
     } catch (error) {
-        console.log(error, "error in update profile");
-        return res.status(500).json({ error: 'Internal Server Error' });
+        console.error('Update error:', error);
+        res.status(500).json({
+            error: error.message || 'Internal Server Error',
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
-}
+};
+
 const getCourseData = async (req, res) => {
     try {
         const Course = mongoose.model('Course');

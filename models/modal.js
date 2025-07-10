@@ -195,27 +195,11 @@ module.exports = (mongoose) => ({
             codelanguage: { type: String, required: true },
             userId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
             status: { type: String, required: true, enum: ['Accepted', 'Wrong Answer', 'Time Limit Exceeded', 'Runtime Error', 'Compilation Error'], default: '' },
+            execution_time: { type: String, default: null },
             createdAt: { type: Date, default: Date.now },
             modifiedAt: { type: Date, default: Date.now }
         })
     ),
-    // Approaches: mongoose.model(
-    //     'Approaches',
-    //     new mongoose.Schema({
-    //         quesId: { type: String, required: true },
-    //         approachDesc: { type: String, required: true },
-    //         approachType: { type: String, required: true, enum: ['Brute Force', 'Improved', 'Optimised'] },
-    //         code: { type: mongoose.Schema.Types.ObjectId, ref: 'Code' },
-    //         approachName: { type: String },
-    //         time_complexity: { type: String, default: null },
-    //         space_complexity: { type: String, default: null },
-    //         order: { type: Number, default: 0 },
-    //         createdAt: { type: Date, default: Date.now },
-    //         modifiedAt: { type: Date, default: Date.now }
-    //     })
-    // ),
-
-    //new schema for approach
     Approaches: mongoose.model(
         'Approaches',
         new mongoose.Schema({

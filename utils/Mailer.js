@@ -9,12 +9,12 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-transporter.verify((err, success) => {
-  if (err) {
-    console.error("❌ SMTP failed:", err);
-  } else {
-    console.log("✅ SMTP is ready");
-  }
-});
+// transporter.verify((err, success) => {
+//   if (err) {
+//     console.error("❌ SMTP failed:", err);
+//   } else {
+//     console.log("✅ SMTP is ready");
+//   }
+// });
 
 module.exports = transporter;
