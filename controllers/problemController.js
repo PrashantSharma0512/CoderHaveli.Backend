@@ -122,7 +122,7 @@ const run = async (req, res) => {
     try {
         const Submission = mongoose.model('Submission')
         const Code = mongoose.model('Code')
-        const { lang, code, testcases,} = req.body;
+        const { lang, code, testcases, } = req.body;
         if (!testcases?.length) {
             return res.status(400).json({ error: 'No test cases provided' });
         }
@@ -184,98 +184,105 @@ const run = async (req, res) => {
 
 const submit = async (req, res) => {
     try {
-        const { quesId, lang, code, userId  } = req.body;
-        const Testcase = mongoose.model('TestCase');
-        const Submission = mongoose.model('Submission')
-        const Code = mongoose.model('Code')
-        const testcases = await Testcase.find({ quesId: quesId }, { input: 1, output: 1, });
-        if (!testcases?.length) {
-            return res.status(400).json({ error: 'No test cases provided' });
+        const { quesId, lang, code, userId } = req.body;
+
+        // Validate required fields
+        if (!quesId || !lang || !code || !userId) {
+            return res.status(400).json({ error: 'Missing required fields' });
         }
+
+        const Testcase = mongoose.model('TestCase');
+        const Submission = mongoose.model('Submission');
+        const Code = mongoose.model('Code');
+
+        // Get test cases
+        const testcases = await Testcase.find({ quesId }, { input: 1, output: 1 });
+        if (!testcases?.length) {
+            return res.status(400).json({ error: 'No test cases found for this question' });
+        }
+
+        // Compile and test the code
         const compilerUrl = process.env.COMPILER;
         const config = {
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             timeout: 25000,
         };
 
         const response = await axios.post(
             `${compilerUrl}/api/batch`,
-            {
-                language: lang,
-                code: code,
-                testcases: testcases
-            },
+            { language: lang, code, testcases },
             config
         );
 
-        const status = response.data.isFullyPassed === true ? 'Accepted' : 'Wrong Answer';
-        const codeData = await Code.updateOne(
-            { userId: userId, quesId: quesId },
-            {
-                $set:
-                {
-                    code: code,
-                    quesId: quesId,
-                    codelanguage: lang,
-                    modifiedAt: new Date()
-                },
-            },
-            {
-                upsert: true,
-            }
-        )
-        await Submission.updateOne(
-            {
-                userId: userId,
-                quesId: quesId
-            },
-            {
-                code: new mongoose.Types.ObjectId(codeData.upsertedId),
-                codelanguage: lang,
-                status: status,
-                execution_time: response.data.totalExecutionTime || 0,
-                modifiedAt: new Date()
-            }, { upsert: true });
+        // Determine submission status
+        const status = response.data.isFullyPassed ? 'Accepted' : 'Wrong Answer';
+        const executionTime = response.data.totalExecutionTime || 0;
 
-        return res.json(response.data);
+        // Create new Code document
+        const newCode = new Code({
+            userId,
+            quesId,
+            code,
+            codelanguage: lang,
+            createdAt: new Date(),
+            modifiedAt: new Date()
+        });
+        const savedCode = await newCode.save();
+
+        // Create new Submission document
+        const newSubmission = new Submission({
+            userId,
+            quesId,
+            code: savedCode._id,
+            codelanguage: lang,
+            status,
+            execution_time: executionTime,
+            createdAt: new Date(),
+            modifiedAt: new Date()
+        });
+        const savedSubmission = await newSubmission.save();
+
+        return res.json({
+            ...response.data,
+            submissionId: savedSubmission._id,
+            codeId: savedCode._id
+        });
 
     } catch (err) {
-        console.error('Compiler service error:', err);
+        console.error('Submission error:', err);
+
+        // Handle specific error cases
+        if (err instanceof mongoose.Error.ValidationError) {
+            return res.status(400).json({
+                error: 'Validation error',
+                details: err.message
+            });
+        }
 
         if (err.response) {
-            // The request was made and the server responded with a status code
-            console.error('Response data:', err.response.data);
-            console.error('Response status:', err.response.status);
-
-            if (err.response.status === 502) {
-                return res.status(503).json({
-                    error: 'Compiler service unavailable',
-                    details: 'The compiler service returned a 502 Bad Gateway error. Please check if it is running.'
-                });
-            }
-
-            return res.status(err.response.status).json({
+            // Compiler service responded with error
+            const status = err.response.status === 502 ? 503 : err.response.status;
+            return res.status(status).json({
                 error: 'Compiler service error',
-                details: err.response.data
+                details: err.response.data || 'Unknown compiler error'
             });
-        } else if (err.request) {
-            // The request was made but no response was received
+        }
+
+        if (err.request) {
+            // No response from compiler
             return res.status(504).json({
                 error: 'Compiler service timeout',
                 details: 'The compiler service did not respond in time'
             });
-        } else {
-            // Something happened in setting up the request
-            return res.status(500).json({
-                error: 'Internal server error',
-                details: err.message
-            });
         }
-    }
-}
 
+        // Other errors
+        return res.status(500).json({
+            error: 'Internal server error',
+            details: err.message
+        });
+    }
+};      
 const getSubmission = async (req, res) => {
     try {
         const { userId, quesId } = req.params;
