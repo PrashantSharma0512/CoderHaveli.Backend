@@ -233,7 +233,7 @@ const submit = async (req, res) => {
         const newSubmission = new Submission({
             userId,
             quesId,
-            code: savedCode._id,
+            code: new mongoose.Types.ObjectId(savedCode._id),
             codelanguage: lang,
             status,
             execution_time: executionTime,
@@ -282,7 +282,7 @@ const submit = async (req, res) => {
             details: err.message
         });
     }
-};      
+};
 const getSubmission = async (req, res) => {
     try {
         const { userId, quesId } = req.params;
