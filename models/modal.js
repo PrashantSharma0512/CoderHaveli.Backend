@@ -21,6 +21,10 @@ module.exports = (mongoose) => ({
                     message: 'Invalid email format'
                 }
             },
+            phone: {
+                type: Number,
+                unique: true,
+            },
             password: {
                 type: String,
                 required: true

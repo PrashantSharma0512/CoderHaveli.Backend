@@ -1,6 +1,6 @@
 const indexController = {}
 const mongoose = require('mongoose');
-const { uploadToCloudinary } = require('../utils/Upload');
+const { uploadDirectly } = require('../utils/Upload');
 const fs = require('fs')
 const Profile = async (req, res) => {
     try {
@@ -50,53 +50,105 @@ const Profile = async (req, res) => {
 const updateProfile = async (req, res) => {
     try {
         const User = mongoose.model('User');
-        const { name, bio, phone, id } = req.body;
+        const { name, bio, phone, id, avatar } = req.body;
+        console.log(phone, "ph");
 
-        // Debugging logs
-        console.log('Request body:', req.body);
-        console.log('Uploaded file:', req.file);
-
+        // Validate required fields
         if (!id) {
-            return res.status(400).json({ error: 'User ID is required' });
+            return res.status(400).json({
+                success: false,
+                error: 'User ID is required',
+                code: 'MISSING_USER_ID'
+            });
         }
 
-        const updateData = { name, bio, phone };
+        const updateData = {
+            ...(name && { name }),
+            ...(bio && { bio }),
+            ...(phone && { phone }),
+            updatedAt: new Date()
+        };
+        console.log(avatar);
 
-        // Only process avatar if file was uploaded
-        if (req.file) {
+        // Process avatar if provided as base64
+        if (avatar) {
             try {
-                const uploadResult = await uploadToCloudinary(req.file.path);
-                updateData.avatar = uploadResult.secure_url;
+                console.log('Starting Cloudinary upload...');
 
-                // Clean up temp file
-                fs.unlinkSync(req.file.path);
+                // Validate base64 string format
+                if (!avatar.startsWith('data:image/')) {
+                    throw new Error('Invalid base64 image format');
+                }
+
+                const uploadResult = await uploadDirectly(avatar, {
+                    folder: 'user_avatars',
+                    transformation: [
+                        { width: 300, height: 300, crop: 'fill' },
+                        { quality: 'auto' }
+                    ]
+                });
+
+                updateData.avatar = uploadResult.secure_url;
+                console.log('Avatar upload successful');
+
             } catch (uploadError) {
-                console.error('Cloudinary upload failed:', uploadError);
-                if (req.file?.path) fs.unlinkSync(req.file.path);
-                throw uploadError;
+                console.error('Cloudinary upload failed:', uploadError.message);
+                return res.status(400).json({
+                    success: false,
+                    error: 'Invalid image upload',
+                    code: 'INVALID_IMAGE',
+                    details: uploadError.message
+                });
             }
         }
+        console.log(updateData,"data");
 
+        // Update user data
         const updatedUser = await User.findByIdAndUpdate(
             id,
             { $set: updateData },
-            { new: true, runValidators: true }
-        ).select('-password');
+            {
+                new: true,
+                runValidators: true,
+                context: 'query'
+            }
+        ).select('-password -__v -resetPasswordToken');
 
         if (!updatedUser) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({
+                success: false,
+                error: 'User not found',
+                code: 'USER_NOT_FOUND'
+            });
         }
 
-        res.status(200).json({
-            user: updatedUser,
+        return res.status(200).json({
+            success: true,
+            data: updatedUser,
             message: "Profile updated successfully"
         });
 
     } catch (error) {
-        console.error('Update error:', error);
-        res.status(500).json({
-            error: error.message || 'Internal Server Error',
-            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        console.error('Profile update error:', error.message);
+
+        // Handle specific error types
+        if (error.name === 'ValidationError') {
+            const errors = Object.values(error.errors).map(err => err.message);
+            return res.status(400).json({
+                success: false,
+                error: 'Validation failed',
+                details: errors,
+                code: 'VALIDATION_ERROR'
+            });
+        }
+
+        return res.status(500).json({
+            success: false,
+            error: 'Internal Server Error',
+            code: 'SERVER_ERROR',
+            ...(process.env.NODE_ENV === 'development' && {
+                details: error.message
+            })
         });
     }
 };

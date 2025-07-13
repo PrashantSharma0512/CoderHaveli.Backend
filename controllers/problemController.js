@@ -142,7 +142,6 @@ const run = async (req, res) => {
             },
             config
         );
-        console.log(response.data, "datat");
 
 
         return res.json(response.data);
@@ -283,6 +282,7 @@ const submit = async (req, res) => {
         });
     }
 };
+
 const getSubmission = async (req, res) => {
     try {
         const { userId, quesId } = req.params;
@@ -311,7 +311,7 @@ const getSubmission = async (req, res) => {
 
         res.status(200).json(submissions);
     } catch (error) {
-        console.log("Error in getting submission", error);
+        console.error("Error in getting submission", error);
         res.status(500).send('Internal server error');
     }
 }
