@@ -122,7 +122,7 @@ const run = async (req, res) => {
     try {
         const Submission = mongoose.model('Submission')
         const Code = mongoose.model('Code')
-        const { lang, code, testcases, quesId, userId } = req.body;
+        const { lang, code, testcases,} = req.body;
         if (!testcases?.length) {
             return res.status(400).json({ error: 'No test cases provided' });
         }
@@ -184,7 +184,7 @@ const run = async (req, res) => {
 
 const submit = async (req, res) => {
     try {
-        const { quesId, lang, code } = req.body;
+        const { quesId, lang, code, userId  } = req.body;
         const Testcase = mongoose.model('TestCase');
         const Submission = mongoose.model('Submission')
         const Code = mongoose.model('Code')
