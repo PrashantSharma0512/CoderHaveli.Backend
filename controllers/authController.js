@@ -70,23 +70,57 @@ const register = async (req, res) => {
         await transporter.sendMail({
             from: `"CoderHaveli" <${process.env.MAIL_USER}>`,
             to: email,
-            subject: "🔐 Your CoderHaveli Verification OTP",
+            subject: "🔐 Your CoderHaveli Verification Code",
             html: `
-                <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <div style="background: linear-gradient(135deg, #FFD700 0%, #D4AF37 100%); padding: 20px; text-align: center;">
-                        <h2 style="color: white; margin: 0;">Your Verification Code</h2>
-                    </div>
-                    <div style="padding: 30px; background: white;">
-                        <p>Enter this OTP to verify your email:</p>
-                        <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; 
-                            margin: 20px 0; color: #D4AF37;">${otp}</div>
-                        <p style="color: #666; font-size: 14px;">
-                            ⏳ Expires in 10 minutes<br>
-                            🔒 Do not share this code with anyone
-                        </p>
-                    </div>
+        <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e8e8e8; border-radius: 4px; overflow: hidden; background: white;">
+            <div style="background: linear-gradient(135deg, #FFD700 0%, #D4AF37 100%); padding: 20px; text-align: center;">
+                <h1 style="color: white; margin: 0; font-size: 28px; text-shadow: 1px 1px 3px rgba(0,0,0,0.2); letter-spacing: 1px;">
+                    <strong>CoderHaveli</strong>
+                </h1>
+                <p style="color: white; margin: 5px 0 0; font-size: 14px; opacity: 0.9;">Code • Create • Conquer</p>
+            </div>
+            
+            <div style="padding: 30px;">
+                <h2 style="color: #333; margin-top: 0; border-bottom: 2px solid #FFD700; padding-bottom: 10px; display: inline-block;">
+                    Email Verification Required
+                </h2>
+                
+                <p style="font-size: 15px; line-height: 1.6; color: #555;">
+                    Welcome to CoderHaveli! Here's your verification code:
+                </p>
+                
+                <div style="background: linear-gradient(135deg, #FFF9E6 0%, #FFEEB8 100%); 
+                        border: 2px dashed #D4AF37;
+                        border-radius: 8px; 
+                        padding: 20px; 
+                        text-align: center; 
+                        margin: 25px 0; 
+                        font-size: 32px; 
+                        font-weight: bold; 
+                        color: #B8860B;
+                        letter-spacing: 3px;">
+                    ${otp}
                 </div>
-            `
+                
+                <div style="background-color: #FFFDF6; border-left: 4px solid #FFD700; padding: 12px; margin: 20px 0;">
+                    <p style="font-size: 13px; color: #666; margin: 0;">
+                        ⏳ <strong>Expires in 10 minutes</strong><br>
+                        🔒 This code is confidential - never share it
+                    </p>
+                </div>
+                
+                <p style="font-size: 14px; color: #777; text-align: center; line-height: 1.5;">
+                    If you didn't sign up for CoderHaveli, please ignore this email.
+                </p>
+            </div>
+            
+            <div style="background: #F8F5EE; padding: 15px; text-align: center; border-top: 1px solid #FFD700;">
+                <p style="margin: 5px 0; font-size: 12px; color: #B8860B;">
+                    © ${new Date().getFullYear()} <strong>CoderHaveli</strong> | The Premium Coding Community
+                </p>
+            </div>
+        </div>
+    `
         });
 
         res.status(200).json({
@@ -161,23 +195,57 @@ const resendRegistrationOTP = async (req, res) => {
         await transporter.sendMail({
             from: `"CoderHaveli" <${process.env.MAIL_USER}>`,
             to: email,
-            subject: "🔐 Your New CoderHaveli Verification OTP",
+            subject: "🔐 Your CoderHaveli Resend Verification Code",
             html: `
-                <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <div style="background: linear-gradient(135deg, #FFD700 0%, #D4AF37 100%); padding: 20px; text-align: center;">
-                        <h2 style="color: white; margin: 0;">Your New Verification Code</h2>
-                    </div>
-                    <div style="padding: 30px; background: white;">
-                        <p>Enter this OTP to verify your email:</p>
-                        <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; 
-                            margin: 20px 0; color: #D4AF37;">${otp}</div>
-                        <p style="color: #666; font-size: 14px;">
-                            ⏳ Expires in 10 minutes<br>
-                            🔒 Do not share this code with anyone
-                        </p>
-                    </div>
+        <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e8e8e8; border-radius: 4px; overflow: hidden; background: white;">
+            <div style="background: linear-gradient(135deg, #FFD700 0%, #D4AF37 100%); padding: 20px; text-align: center;">
+                <h1 style="color: white; margin: 0; font-size: 28px; text-shadow: 1px 1px 3px rgba(0,0,0,0.2); letter-spacing: 1px;">
+                    <strong>CoderHaveli</strong>
+                </h1>
+                <p style="color: white; margin: 5px 0 0; font-size: 14px; opacity: 0.9;">Code • Create • Conquer</p>
+            </div>
+            
+            <div style="padding: 30px;">
+                <h2 style="color: #333; margin-top: 0; border-bottom: 2px solid #FFD700; padding-bottom: 10px; display: inline-block;">
+                    Email Verification Required
+                </h2>
+                
+                <p style="font-size: 15px; line-height: 1.6; color: #555;">
+                    Welcome to CoderHaveli! Here's your verification code:
+                </p>
+                
+                <div style="background: linear-gradient(135deg, #FFF9E6 0%, #FFEEB8 100%); 
+                        border: 2px dashed #D4AF37;
+                        border-radius: 8px; 
+                        padding: 20px; 
+                        text-align: center; 
+                        margin: 25px 0; 
+                        font-size: 32px; 
+                        font-weight: bold; 
+                        color: #B8860B;
+                        letter-spacing: 3px;">
+                    ${otp}
                 </div>
-            `
+                
+                <div style="background-color: #FFFDF6; border-left: 4px solid #FFD700; padding: 12px; margin: 20px 0;">
+                    <p style="font-size: 13px; color: #666; margin: 0;">
+                        ⏳ <strong>Expires in 10 minutes</strong><br>
+                        🔒 This code is confidential - never share it
+                    </p>
+                </div>
+                
+                <p style="font-size: 14px; color: #777; text-align: center; line-height: 1.5;">
+                    If you didn't sign up for CoderHaveli, please ignore this email.
+                </p>
+            </div>
+            
+            <div style="background: #F8F5EE; padding: 15px; text-align: center; border-top: 1px solid #FFD700;">
+                <p style="margin: 5px 0; font-size: 12px; color: #B8860B;">
+                    © ${new Date().getFullYear()} <strong>CoderHaveli</strong> | The Premium Coding Community
+                </p>
+            </div>
+        </div>
+    `
         });
 
         res.status(200).json({ message: 'New OTP sent to your email' });
