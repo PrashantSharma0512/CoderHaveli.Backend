@@ -142,33 +142,8 @@ const run = async (req, res) => {
             },
             config
         );
-        const status = response.data.isFullyPassed === true ? 'Accepted' : 'Wrong Answer';
-        const codeData = await Code.updateOne(
-            { userId: userId, quesId: quesId },
-            {
-                $set:
-                {
-                    code: code,
-                    quesId: quesId,
-                    codelanguage: lang,
-                    modifiedAt: new Date()
-                },
-            },
-            {
-                upsert: true,
-            }
-        )
-        await Submission.updateOne(
-            {
-                userId: userId,
-                quesId: quesId
-            },
-            {
-                code: new mongoose.Types.ObjectId(codeData.upsertedId),
-                codelanguage: lang,
-                status: status,
-                modifiedAt: new Date()
-            }, { upsert: true });
+        console.log(response.data, "datat");
+
 
         return res.json(response.data);
 
@@ -211,6 +186,8 @@ const submit = async (req, res) => {
     try {
         const { quesId, lang, code } = req.body;
         const Testcase = mongoose.model('TestCase');
+        const Submission = mongoose.model('Submission')
+        const Code = mongoose.model('Code')
         const testcases = await Testcase.find({ quesId: quesId }, { input: 1, output: 1, });
         if (!testcases?.length) {
             return res.status(400).json({ error: 'No test cases provided' });
@@ -233,7 +210,35 @@ const submit = async (req, res) => {
             config
         );
 
-        console.log("pra", response.data);
+        const status = response.data.isFullyPassed === true ? 'Accepted' : 'Wrong Answer';
+        const codeData = await Code.updateOne(
+            { userId: userId, quesId: quesId },
+            {
+                $set:
+                {
+                    code: code,
+                    quesId: quesId,
+                    codelanguage: lang,
+                    modifiedAt: new Date()
+                },
+            },
+            {
+                upsert: true,
+            }
+        )
+        await Submission.updateOne(
+            {
+                userId: userId,
+                quesId: quesId
+            },
+            {
+                code: new mongoose.Types.ObjectId(codeData.upsertedId),
+                codelanguage: lang,
+                status: status,
+                execution_time: response.data.totalExecutionTime || 0,
+                modifiedAt: new Date()
+            }, { upsert: true });
+
         return res.json(response.data);
 
     } catch (err) {
@@ -272,17 +277,34 @@ const submit = async (req, res) => {
 }
 
 const getSubmission = async (req, res) => {
-    console.log("first");
     try {
+        const { userId, quesId } = req.params;
 
-
-        const { id, quesId } = req.query;
         const Submission = mongoose.model('Submission');
-        const submission = Submission.find({ $and: [{ userId: new Types.ObjectId(id) }, { quesId: quesId }] }, { status, execution_time, createdAt, codelanguage })
-        console.log(submission);
-        res.status(200).json(submission)
+
+        const submissions = await Submission.aggregate([
+            {
+                $match: {
+                    userId: new mongoose.Types.ObjectId(userId),
+                    quesId: quesId
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    // "QNo": "$quesId",
+                    Language: "$codelanguage",
+                    Status: "$status",
+                    "Execution Time": "$execution_time",
+                    "Submission Time": "$createdAt",
+                }
+            },
+            { $sort: { createdAt: -1 } }
+        ]);
+
+        res.status(200).json(submissions);
     } catch (error) {
-        console.log("error in getting submission", error);
+        console.log("Error in getting submission", error);
         res.status(500).send('Internal server error');
     }
 }

@@ -21,7 +21,6 @@ const generateUserName = async (name) => {
     return `${baseUsername}${counter}`;
 };
 
-// Registration with OTP
 const register = async (req, res) => {
     try {
         const { name, email, password, phone, role } = req.body;

@@ -5,7 +5,7 @@ const Problem = require('../controllers/problemController');
 router.get('/', Problem.getAllProblems)
 router.get('/:id', Problem.getProblemById);
 router.get('/get-editorial/:id', Problem.getEditorialById);
-router.get('get-submission/:id&:quesId', Problem.getSubmission);
+router.get('/get-submission/:userId/:quesId', Problem.getSubmission);
 
 //routes for compiler
 router.post('/run', Problem.run)
