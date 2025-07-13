@@ -131,7 +131,6 @@ module.exports = (mongoose) => ({
         new mongoose.Schema({
             quesId: { type: String, required: true },
             userId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
-            quesName: { type: String, required: true },
             code: { type: String, required: true },
             codelanguage: { type: String, required: true },
             createdAt: { type: Date, default: Date.now },
