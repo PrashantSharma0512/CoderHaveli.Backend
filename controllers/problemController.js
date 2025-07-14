@@ -315,6 +315,43 @@ const getSubmission = async (req, res) => {
         res.status(500).send('Internal server error');
     }
 }
+const getStarterCode = async (req, res) => {
+    try {
+        const { id, language } = req.query;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ error: "Invalid problem ID format" });
+        }
+        const StarterCode = mongoose.model('StarterCode');
+        const ProblemList = mongoose.model('ProblemList');
+
+        const ques = await ProblemList.findOne({ _id: id }, { quesId: 1 }).lean();
+
+        if (!ques) {
+            return res.status(404).json({ message: "Problem not found" });
+        }
+
+        const skeleton = await StarterCode.aggregate([
+            {
+                $match: {
+                    quesId: ques.quesId,
+                    language: language
+                }
+            },
+            {
+                $project: {
+                    code: 1,
+                    _id: 0
+                }
+            }
+        ]);
+
+        return res.status(200).json(skeleton);
+    } catch (error) {
+        console.error("Error getting starter code:", error);
+        return res.status(500).json({ error: error.message });
+    }
+};
+
 
 problemController.getAllProblems = getAllProblems;
 problemController.getProblemById = getProblemById;
@@ -322,4 +359,5 @@ problemController.getEditorialById = getEditorialById;
 problemController.run = run;
 problemController.submit = submit;
 problemController.getSubmission = getSubmission;
+problemController.getStarterCode = getStarterCode;
 module.exports = problemController;

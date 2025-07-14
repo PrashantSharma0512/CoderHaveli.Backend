@@ -101,7 +101,7 @@ const updateProfile = async (req, res) => {
                 });
             }
         }
-        console.log(updateData,"data");
+        console.log(updateData, "data");
 
         // Update user data
         const updatedUser = await User.findByIdAndUpdate(
@@ -372,6 +372,8 @@ const getCategoryData = async (req, res) => {
 
 
 
+
+
 indexController.getCourseData = getCourseData;
 indexController.getCarouselData = getCarouselData;
 indexController.getTutorialData = getTutorialData;
@@ -380,5 +382,6 @@ indexController.getCategoryData = getCategoryData;
 indexController.getProblemData = getProblemData;
 indexController.Profile = Profile;
 indexController.updateProfile = updateProfile;
+
 
 module.exports = indexController;

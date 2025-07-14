@@ -250,6 +250,27 @@ module.exports = (mongoose) => ({
             modifiedAt: { type: Date, default: Date.now }
         })
     ),
+    StarterCodeSchema: mongoose.model(
+        'StarterCode',
+        new mongoose.Schema({
+            quesId: {
+                type: String,
+                required: true,
+            },
+            language: {
+                type: String,
+                required: true,
+                enum: ['javascript', 'python', 'java', 'cpp']
+            },
+            code: {
+                type: String,
+                required: true
+            },
+            createdAt: { type: Date, default: Date.now },
+            modifiedAt: { type: Date, default: Date.now }
+        })
+    ),
+
     email: { type: String, required: true, unique: true, index: true },
 
     difficulty: { type: String, required: true, enum: ['easy', 'medium', 'hard'], index: true },
