@@ -123,15 +123,24 @@ const run = async (req, res) => {
         const Submission = mongoose.model('Submission')
         const Code = mongoose.model('Code')
         const { lang, code, testcases, } = req.body;
+        if (!lang || typeof lang !== 'string') {
+            return res.status(400).json({ error: 'Missing or invalid language' });
+        }
+
+        if (!code || typeof code !== 'string') {
+            return res.status(400).json({ error: 'Missing or invalid code' });
+        }
+
         if (!testcases?.length) {
             return res.status(400).json({ error: 'No test cases provided' });
         }
+
         const compilerUrl = process.env.COMPILER;
         const config = {
             headers: {
                 'Content-Type': 'application/json',
             },
-            timeout: 25000, // 25 seconds timeout (Render free tier has 30s limit)
+            timeout: 25000, // 25 seconds timeout (Render free tier has 90s limit)
         };
         const response = await axios.post(
             `${compilerUrl}/api/batch`,
@@ -315,26 +324,40 @@ const getSubmission = async (req, res) => {
         res.status(500).send('Internal server error');
     }
 }
+
 const getStarterCode = async (req, res) => {
     try {
-        const { id, language } = req.query;
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ error: "Invalid problem ID format" });
+        const { quesId, language } = req.query;
+
+        // ✅ Validate presence
+        if (!quesId || !language) {
+            return res.status(400).json({
+                error: "Missing required query parameters: 'quesId' and 'language'."
+            });
         }
+
+        // ✅ Validate allowed languages
+        const allowedLanguages = ['javascript', 'python', 'java', 'cpp'];
+        if (!allowedLanguages.includes(language.toLowerCase())) {
+            return res.status(400).json({
+                error: `Invalid language. Allowed values are: ${allowedLanguages.join(', ')}.`
+            });
+        }
+
+        // ✅ Optional: Validate quesId format (if ObjectId is expected elsewhere)
+        if (typeof quesId !== 'string') {
+            return res.status(400).json({
+                error: "Invalid 'quesId'. It must be a string."
+            });
+        }
+
         const StarterCode = mongoose.model('StarterCode');
-        const ProblemList = mongoose.model('ProblemList');
-
-        const ques = await ProblemList.findOne({ _id: id }, { quesId: 1 }).lean();
-
-        if (!ques) {
-            return res.status(404).json({ message: "Problem not found" });
-        }
 
         const skeleton = await StarterCode.aggregate([
             {
                 $match: {
-                    quesId: ques.quesId,
-                    language: language
+                    quesId: quesId,
+                    language: language.toLowerCase()
                 }
             },
             {
@@ -345,12 +368,22 @@ const getStarterCode = async (req, res) => {
             }
         ]);
 
-        return res.status(200).json(skeleton);
+        if (!skeleton || skeleton.length === 0) {
+            return res.status(404).json({
+                error: "Starter code not found for the given quesId and language."
+            });
+        }
+
+        return res.status(200).json(skeleton[0]); // return single object not array
     } catch (error) {
         console.error("Error getting starter code:", error);
-        return res.status(500).json({ error: error.message });
+        return res.status(500).json({
+            error: "Internal server error",
+            details: error.message
+        });
     }
 };
+
 
 
 problemController.getAllProblems = getAllProblems;
