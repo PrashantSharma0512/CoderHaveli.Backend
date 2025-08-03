@@ -9,6 +9,14 @@ router.get('/get-editorial/:id', Problem.getEditorialById);
 router.get('/get-submission/:userId/:quesId', Problem.getSubmission);
 router.get('/get-starter-code', Problem.getStarterCode);
 
+
+// routes for comment section
+router.get('/fetch-comment', Problem.fetchComment)
+router.post('/add-comment', Problem.addComment)
+// router.put('/edit-comment',Problem.editComment)
+// router.put('/delete-comment',Problem.deleteComment)
+
+
 //routes for compiler
 router.post('/run', Problem.run)
 router.post('/submit', Problem.submit)

@@ -213,7 +213,7 @@ const submit = async (req, res) => {
         const compilerUrl = process.env.COMPILER;
         const config = {
             headers: { 'Content-Type': 'application/json' },
-            timeout: 25000,
+            timeout: 250000,
         };
 
         const response = await axios.post(
@@ -383,14 +383,77 @@ const getStarterCode = async (req, res) => {
         });
     }
 };
+const fetchComment = async (req, res) => {
+    try {
+        const { quesId, userId } = req.query;
+        if (!quesId) {
+            return res.status(400).json({ error: "Missing quesId in query" });
+        }
+        if (!userId) {
+            return res.status(400).json({ error: "Missing userId in query" });
+        }
 
+        const Comment = mongoose.model("Comment");
+        const User = mongoose.model("User");
+        const userData = await User.find({ _id: userId }, { avatar: 1, name: 1 })
+
+        const comments = await Comment.find({ quesId, isDeleted: false })
+            .sort({ createdAt: -1 });
+
+
+        res.status(200).json({ success: true, comments: comments, userData: userData });
+    } catch (error) {
+        console.error("Error in fetchComment:", error);
+        res.status(500).json({ error: "Server error while fetching comments" });
+    }
+};
+
+const addComment = async (req, res) => {
+    try {
+        const { quesId, content, contentType, author } = req.body;
+        const Comment = mongoose.model("Comment");
+
+        if (!req.user || !req.user._id) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+
+        if (!quesId || !content || !contentType) {
+            return res.status(400).json({ error: "Missing required fields" });
+        }
+
+        const newComment = new Comment({
+            quesId,
+            content,
+            type: contentType,
+            author: author,
+            parentComment: parentComment || null,
+        });
+
+        await newComment.save();
+
+        const populatedComment = await Comment.findById(newComment._id).populate("author", "username avatar");
+
+        res.status(201).json({ success: true, comment: populatedComment });
+    } catch (error) {
+        console.error("Error in addComment:", error);
+        res.status(500).json({ error: "Server error while adding comment" });
+    }
+};
+
+const editComment = () => { }
+const deleteComment = () => { }
 
 
 problemController.getAllProblems = getAllProblems;
+problemController.fetchComment = fetchComment
+problemController.addComment = addComment
+problemController.editComment = editComment
+problemController.deleteComment = deleteComment
 problemController.getProblemById = getProblemById;
 problemController.getEditorialById = getEditorialById;
 problemController.run = run;
 problemController.submit = submit;
 problemController.getSubmission = getSubmission;
 problemController.getStarterCode = getStarterCode;
+
 module.exports = problemController;

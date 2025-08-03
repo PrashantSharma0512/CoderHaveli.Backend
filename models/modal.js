@@ -224,7 +224,6 @@ module.exports = (mongoose) => ({
             modifiedAt: { type: Date, default: Date.now }
         })
     ),
-
     Progess: mongoose.model(
         'Progess',
         new mongoose.Schema({
@@ -270,6 +269,62 @@ module.exports = (mongoose) => ({
             modifiedAt: { type: Date, default: Date.now }
         })
     ),
+    Comment: mongoose.model(
+        "Comment",
+        new mongoose.Schema({
+            quesId: {
+                type: String,
+                required: true,
+                index: true,
+            },
+            author: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "User",
+                required: true,
+            },
+            parentComment: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "Comment",
+                default: null,
+            },
+            type: {
+                type: String,
+                enum: ["general", "difficulty", "approach", "issue", "feedback"],
+                default: "general",
+            },
+            content: {
+                type: String,
+                required: true,
+                trim: true,
+            },
+            likes: [
+                {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: "User",
+                },
+            ],
+            isEdited: {
+                type: Boolean,
+                default: false,
+            },
+            isDeleted: {
+                type: Boolean,
+                default: false,
+            },
+            createdAt: {
+                type: Date,
+                default: Date.now,
+            },
+            updatedAt: {
+                type: Date,
+                default: Date.now,
+            },
+        }).pre("save", function (next) {
+            this.updatedAt = new Date();
+            next();
+        })
+    ),
+
 
     email: { type: String, required: true, unique: true, index: true },
 
