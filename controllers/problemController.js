@@ -395,45 +395,44 @@ const fetchComment = async (req, res) => {
 
         const Comment = mongoose.model("Comment");
         const User = mongoose.model("User");
-        const userData = await User.find({ _id: userId }, { avatar: 1, name: 1 })
 
+        // Fetch logged-in user's minimal info (if needed separately)
+        const userData = await User.findById(userId, { avatar: 1, name: 1 });
+
+        // Fetch comments & populate author with name + avatar
         const comments = await Comment.find({ quesId, isDeleted: false })
+            .populate("author", "avatar name") // populate correct field
             .sort({ createdAt: -1 });
 
-
-        res.status(200).json({ success: true, comments: comments, userData: userData });
+        res.status(200).json({ success: true, comments, userData });
     } catch (error) {
         console.error("Error in fetchComment:", error);
         res.status(500).json({ error: "Server error while fetching comments" });
     }
 };
 
+
 const addComment = async (req, res) => {
     try {
-        const { quesId, content, contentType, author } = req.body;
+        const { quesId, content, commentType, author, parentComment } = req.body;
         const Comment = mongoose.model("Comment");
 
-        if (!req.user || !req.user._id) {
-            return res.status(401).json({ error: "Unauthorized" });
-        }
 
-        if (!quesId || !content || !contentType) {
+        if (!quesId || !content || !commentType || !author) {
             return res.status(400).json({ error: "Missing required fields" });
         }
 
         const newComment = new Comment({
             quesId,
             content,
-            type: contentType,
+            type: commentType,
             author: author,
             parentComment: parentComment || null,
         });
 
         await newComment.save();
 
-        const populatedComment = await Comment.findById(newComment._id).populate("author", "username avatar");
-
-        res.status(201).json({ success: true, comment: populatedComment });
+        res.status(201).json({ success: true, comment: 'comment add sucessfully' });
     } catch (error) {
         console.error("Error in addComment:", error);
         res.status(500).json({ error: "Server error while adding comment" });
