@@ -2,6 +2,7 @@ const indexController = {}
 const mongoose = require('mongoose');
 const { uploadDirectly } = require('../utils/Upload');
 const fs = require('fs')
+
 const Profile = async (req, res) => {
     try {
 
@@ -47,11 +48,11 @@ const Profile = async (req, res) => {
         });
     }
 }
+
 const updateProfile = async (req, res) => {
     try {
         const User = mongoose.model('User');
         const { name, bio, phone, id, avatar } = req.body;
-        console.log(phone, "ph");
 
         // Validate required fields
         if (!id) {
@@ -159,6 +160,11 @@ const getCourseData = async (req, res) => {
 
         const courseData = await Course.aggregate([
             {
+                $match: {
+                    type: "course"
+                }
+            },
+            {
                 $lookup: {
                     from: 'images', // Collection name for Image model
                     localField: 'image',
@@ -223,8 +229,13 @@ const getCarouselData = async (req, res) => {
 
 const getTutorialData = async (req, res) => {
     try {
-        const Tutorial = mongoose.model('Tutorial');
-        const tutorialData = await Tutorial.aggregate([
+        const Course = mongoose.model('Course');
+        const tutorialData = await Course.aggregate([
+            {
+                $match: {
+                    type: "tutorial"
+                }
+            },
             {
                 $lookup: {
                     from: 'images',
