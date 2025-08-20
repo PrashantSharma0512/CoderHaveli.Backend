@@ -34,13 +34,6 @@ mongoConnect(process.env.MONGO_URI)
 
 // Load models
 require('./models/modal')(mongoose);
-
-// Attach mongoose to request object
-// global.nosql = mongoose;
-// app.use((req, res, next) => {
-//   req.nosql = mongoose;
-//   next();
-// });
 app.get('/', (req, res) => {
   res.send('Hello from Render!');
 });

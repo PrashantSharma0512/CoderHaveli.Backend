@@ -87,6 +87,7 @@ module.exports = (mongoose) => ({
         new mongoose.Schema({
             imageId: { type: Number, required: true, unique: true },
             url: { type: String, required: true },
+            name: { type: String, required: true },
             imageType: { type: String, required: true },
             uploadedAt: { type: Date, default: Date.now },
         })
@@ -107,6 +108,7 @@ module.exports = (mongoose) => ({
             requirements: [{ type: String }],
             courseIncludes: [{ type: String }],
             price: { type: Number, default: null },
+            originalPrice: { type: Number, default: null },
             image: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Image' },
             instructor: { type: mongoose.Schema.Types.ObjectId, ref: 'Instructor' },
             category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
@@ -114,6 +116,8 @@ module.exports = (mongoose) => ({
                 title: String,
                 content: String,
                 videoUrl: String,
+                description: String,
+                duration:String
             }],
             createdAt: { type: Date, default: Date.now },
             modifiedAt: { type: Date, default: Date.now }

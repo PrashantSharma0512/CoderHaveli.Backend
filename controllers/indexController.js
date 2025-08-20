@@ -378,6 +378,34 @@ const getCategoryData = async (req, res) => {
         return res.status(500).json({ error: 'Internal Server Error' });
     }
 }
+const detailedTutorial = async (req, res) => {
+    try {
+        const Course = mongoose.model('Course')
+        const { id } = req.query;
+
+        if (!id) {
+            throw new Error("id is required")
+        }
+        const detailedTutorialData = await Course.findOne({
+            _id: new mongoose.Types.ObjectId(id),
+            type: "tutorial"
+        })
+            .populate("image", "url -_id")
+            .populate("category", "name -_id")
+            .populate({
+                path: "instructor",
+                select: "-email",                 // exclude email only
+                populate: {
+                    path: "image",
+                    select: "url -_id"
+                }
+            })
+
+        res.json(detailedTutorialData)
+    } catch (error) {
+        console.error("error while fetching detailed courses", error);
+    }
+}
 
 
 
@@ -391,6 +419,7 @@ indexController.getTutorialData = getTutorialData;
 indexController.getInstructorData = getInstructorData;
 indexController.getCategoryData = getCategoryData;
 indexController.getProblemData = getProblemData;
+indexController.detailedTutorial = detailedTutorial;
 indexController.Profile = Profile;
 indexController.updateProfile = updateProfile;
 
