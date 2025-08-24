@@ -9,5 +9,5 @@ router.get('/get-tutorial', index.getTutorialData);
 router.get('/get-instructor', index.getInstructorData);
 router.get('/get-category', index.getCategoryData);
 router.get('/get-problem', index.getProblemData);
-router.get('/get-detailed-tutorial', index.detailedTutorial);
+router.get('/get-detailed-tutorial', index.detailedTutorialOrCourse);
 module.exports = router;    

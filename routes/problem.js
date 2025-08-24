@@ -2,24 +2,25 @@ const router = require('express').Router();
 const Problem = require('../controllers/problemController');
 
 // routes for get problem data for ui
-router.get('/', Problem.getAllProblems)
+router.get('/problem', Problem.getAllProblems)
+router.get('/problem/get-problem-by-id', Problem.getProblemById);
 
-
-router.get('/get-editorial/:id', Problem.getEditorialById);
-router.get('/get-submission/:userId/:quesId', Problem.getSubmission);
-router.get('/get-starter-code', Problem.getStarterCode);
+router.get('/problem/get-editorial/:id', Problem.getEditorialById);
+router.get('/problem/get-submission/:userId/:quesId', Problem.getSubmission);
+router.get('/problem/get-starter-code', Problem.getStarterCode);
 
 
 // routes for comment section
-router.get('/fetch-comment', Problem.fetchComment)
-router.post('/add-comment', Problem.addComment)
-// router.put('/edit-comment',Problem.editComment)
-// router.put('/delete-comment',Problem.deleteComment)
+router.get('/problem/fetch-comment', Problem.fetchComment)
+router.post('/problem/add-comment', Problem.addComment)
+router.put('/problem/edit-comment', Problem.editComment)
+router.post('/problem/delete-comment', Problem.deleteComment)
+router.post('/problem/like', Problem.addLike)
 
 
 //routes for compiler
-router.post('/run', Problem.run)
-router.post('/submit', Problem.submit)
-router.get('/:id', Problem.getProblemById);
+router.post('/problem/run', Problem.run)
+router.post('/problem/submit', Problem.submit)
+
 
 module.exports = router;

@@ -15,8 +15,9 @@ const getAllProblems = async (req, res) => {
 const getProblemById = async (req, res) => {
     try {
         const Problem = mongoose.model('ProblemList');
-        const { id } = req.params;
+        const { id } = req.query;
 
+        // ✅ Validate ObjectId before using it
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ error: "Invalid problem ID format" });
         }
@@ -383,6 +384,7 @@ const getStarterCode = async (req, res) => {
         });
     }
 };
+
 const fetchComment = async (req, res) => {
     try {
         const { quesId, userId } = req.query;
@@ -438,9 +440,107 @@ const addComment = async (req, res) => {
         res.status(500).json({ error: "Server error while adding comment" });
     }
 };
+const editComment = async (req, res) => {
+    try {
+        const Comment = mongoose.model('Comment');
+        const { id, content, type } = req.body;
 
-const editComment = () => { }
-const deleteComment = () => { }
+        if (!id || !content) {
+            return res.status(400).json({ error: "Missing required fields" });
+        }
+
+        const updated = await Comment.findOneAndUpdate(
+            { _id: new mongoose.Types.ObjectId(id), isDeleted: false },
+            { $set: { content, type: type, updatedAt: new Date() } },
+            { new: true }
+        );
+
+        if (!updated) {
+            return res.status(404).json({ error: "Comment not found" });
+        }
+
+        res.status(200).json({ success: true, updated });
+    } catch (error) {
+        console.error("Error editing comment:", error);
+        res.status(500).json({ error: "Server error" });
+    }
+};
+
+const deleteComment = async (req, res) => {
+    try {
+        const Comment = mongoose.model("Comment");
+        const { id } = req.body;
+
+        if (!id) {
+            return res.status(400).json({ error: "Comment Id not found" });
+        }
+        const deletedComment = await Comment.findOneAndUpdate(
+            { _id: id },
+            { $set: { isDeleted: true } },
+            { new: true }
+        );
+
+        if (!deletedComment) {
+            return res.status(404).json({ error: "Comment not found" });
+        }
+
+        res.status(200).json({ message: "Comment deleted successfully", deletedComment });
+    } catch (error) {
+        console.error("Error deleting comment:", error);
+        res.status(500).json({ error: "Server error" });
+    }
+};
+
+const addLike = async (req, res) => {
+    try {
+        const Comment = mongoose.model("Comment");
+        const { id, userId } = req.body;
+
+        const comment = await Comment.findById(id);
+        if (!comment) {
+            return res.status(404).json({
+                success: false,
+                message: "Comment not found"
+            });
+        }
+
+        const alreadyLiked = comment.likes.includes(userId);
+
+        if (alreadyLiked) {
+            // Remove like if already liked (toggle functionality)
+            await Comment.findByIdAndUpdate(
+                id,
+                { $pull: { likes: userId } },
+                { new: true }
+            );
+
+            return res.status(200).json({
+                success: true,
+                message: "Like removed",
+                liked: false
+            });
+        } else {
+            // Add like if not already liked
+            await Comment.findByIdAndUpdate(
+                id,
+                { $addToSet: { likes: userId } }, // Using $addToSet to prevent duplicates
+                { new: true }
+            );
+
+            return res.status(200).json({
+                success: true,
+                message: "Like added",
+                liked: true
+            });
+        }
+    } catch (error) {
+        console.error("Error adding like:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+};
 
 
 problemController.getAllProblems = getAllProblems;
@@ -448,11 +548,12 @@ problemController.fetchComment = fetchComment
 problemController.addComment = addComment
 problemController.editComment = editComment
 problemController.deleteComment = deleteComment
-problemController.getProblemById = getProblemById;
 problemController.getEditorialById = getEditorialById;
 problemController.run = run;
 problemController.submit = submit;
 problemController.getSubmission = getSubmission;
 problemController.getStarterCode = getStarterCode;
+problemController.getProblemById = getProblemById;
+problemController.addLike = addLike;
 
 module.exports = problemController;

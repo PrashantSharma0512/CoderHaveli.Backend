@@ -378,23 +378,23 @@ const getCategoryData = async (req, res) => {
         return res.status(500).json({ error: 'Internal Server Error' });
     }
 }
-const detailedTutorial = async (req, res) => {
+const detailedTutorialOrCourse = async (req, res) => {
     try {
         const Course = mongoose.model('Course')
-        const { id } = req.query;
+        const { id, type } = req.query;
 
         if (!id) {
             throw new Error("id is required")
         }
         const detailedTutorialData = await Course.findOne({
             _id: new mongoose.Types.ObjectId(id),
-            type: "tutorial"
+            type: type
         })
             .populate("image", "url -_id")
             .populate("category", "name -_id")
             .populate({
                 path: "instructor",
-                select: "-email",                 // exclude email only
+                select: "-email",
                 populate: {
                     path: "image",
                     select: "url -_id"
@@ -419,7 +419,7 @@ indexController.getTutorialData = getTutorialData;
 indexController.getInstructorData = getInstructorData;
 indexController.getCategoryData = getCategoryData;
 indexController.getProblemData = getProblemData;
-indexController.detailedTutorial = detailedTutorial;
+indexController.detailedTutorialOrCourse = detailedTutorialOrCourse;
 indexController.Profile = Profile;
 indexController.updateProfile = updateProfile;
 
