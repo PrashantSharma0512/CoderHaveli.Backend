@@ -117,7 +117,7 @@ module.exports = (mongoose) => ({
                 content: String,
                 videoUrl: String,
                 description: String,
-                duration:String
+                duration: String
             }],
             createdAt: { type: Date, default: Date.now },
             modifiedAt: { type: Date, default: Date.now }
@@ -130,6 +130,7 @@ module.exports = (mongoose) => ({
             email: { type: String, required: true },
             bio: String,
             image: { type: mongoose.Schema.Types.ObjectId, ref: 'Image' },
+            rating: { type: String, default: '' },
             createdAt: { type: Date, default: Date.now }
         })
     ),

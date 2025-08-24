@@ -47,7 +47,7 @@ morgan.token('coloredstatus', function (req, res) {
 });
 // Custom Morgan tokens
 morgan.token('datetime', function () {
-  return new Date().toISOString();
+  return new Date().toLocaleString();
 });
 
 morgan.token('statuscode', function (req, res) {
