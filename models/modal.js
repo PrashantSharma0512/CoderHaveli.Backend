@@ -123,25 +123,6 @@ module.exports = (mongoose) => ({
             modifiedAt: { type: Date, default: Date.now }
         })
     ),
-    // Tutorial: mongoose.model('Tutorial', new mongoose.Schema({
-    //     title: { type: String, required: true },
-    //     description: { type: String, required: true },
-    //     about: { type: String },
-    //     duration: String,
-    //     whatYouWillLearn: [{ type: String }],
-    //     requirements: [{ type: String }],
-    //     courseIncludes: [{ type: String }],
-    //     image: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Image' },
-    //     instructor: { type: mongoose.Schema.Types.ObjectId, ref: 'Instructor' },
-    //     category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
-    //     lessons: [{
-    //         title: String,
-    //         content: String,
-    //         videoUrl: String,
-    //     }],
-    //     createdAt: { type: Date, default: Date.now },
-    //     modifiedAt: { type: Date, default: Date.now }
-    // })),
     Instructor: mongoose.model(
         'Instructor',
         new mongoose.Schema({
