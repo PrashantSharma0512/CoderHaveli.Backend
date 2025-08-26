@@ -334,6 +334,105 @@ module.exports = (mongoose) => ({
             next();
         })
     ),
+    Subscription: mongoose.model(
+        'Subscription',
+        new mongoose.Schema({
+            user: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "User",
+                required: true
+            },
+            course: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "Course",
+                required: true
+            },
+            accessType: {
+                type: String,
+                enum: ["free", "one-time", "subscription"],
+                default: "one-time"
+            },
+            subscriptionPlan: {
+                type: String,
+                enum: ["monthly", "yearly", "lifetime", null], 
+                default: null
+            },
+            startDate: { type: Date, default: Date.now },
+            endDate: { type: Date }, 
+            status: {
+                type: String,
+                enum: ["active", "expired", "cancelled", "pending"],
+                default: "pending"
+            },
+
+            // Payment info
+            payment: {
+                method: {
+                    type: String,
+                    enum: ["free", "card", "upi", "netbanking", "paypal"],
+                    required: true
+                },
+                transactionId: { type: String },
+                amount: { type: Number, default: 0 },
+                originalAmount: { type: Number },
+                currency: { type: String, default: "INR" },
+                status: {
+                    type: String,
+                    enum: ["pending", "completed", "failed", "refunded"],
+                    default: "pending"
+                },
+                providerResponse: { type: Object }, // store raw gateway response (Razorpay/Stripe/etc.)
+            },
+
+            // Optional tracking
+            coupon: { type: mongoose.Schema.Types.ObjectId, ref: "Coupon" },
+            autoRenew: { type: Boolean, default: false }, // useful if you want auto-renewable plans
+        })
+    ),
+    Coupon: mongoose.model(
+        'Coupon',
+        new mongoose.Schema({
+            code: {
+                type: String,
+                required: true,
+                unique: true,
+                uppercase: true, // store as uppercase for consistency
+                trim: true
+            },
+            discountType: {
+                type: String,
+                enum: ["percentage", "fixed"], // percentage = 10% off, fixed = ₹500 off
+                required: true
+            },
+            discountValue: {
+                type: Number,
+                required: true, // e.g., 10 (for 10%) or 500 (for ₹500 off)
+            },
+            maxDiscount: {
+                type: Number,
+                default: null // optional cap for percentage coupons
+            },
+
+            // Usage restrictions
+            applicableTo: {
+                type: String,
+                enum: ["all", "course", "category", "user"],
+                default: "all"
+            },
+            course: { type: mongoose.Schema.Types.ObjectId, ref: "Course" }, // if specific course
+            category: { type: mongoose.Schema.Types.ObjectId, ref: "Category" }, // if specific category
+            user: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // if specific user
+
+            // Validity
+            startDate: { type: Date, default: Date.now },
+            endDate: { type: Date },
+            usageLimit: { type: Number, default: null }, // max times coupon can be used (global)
+            usageCount: { type: Number, default: 0 }, // how many times it’s already used
+            perUserLimit: { type: Number, default: 1 }, // how many times a single user can use
+
+            isActive: { type: Boolean, default: true }
+        })
+    ),
 
 
     email: { type: String, required: true, unique: true, index: true },
