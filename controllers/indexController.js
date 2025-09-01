@@ -229,48 +229,60 @@ const getCarouselData = async (req, res) => {
 
 const getTutorialData = async (req, res) => {
     try {
-        const Course = mongoose.model('Course');
+        const { userId } = req.query;
+        const Course = mongoose.model("Course");
+        const Subscription = mongoose.model("Subscription");
+
+        let excludeCourseIds = [];
+        console.log(userId, "jjj");
+
+        if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+            const subscriptions = await Subscription.find({ user: userId, isDeleted: false }).select("course");
+            excludeCourseIds = subscriptions.map((s) => s.course);
+        }
+
         const tutorialData = await Course.aggregate([
             {
                 $match: {
-                    type: "tutorial"
-                }
+                    type: "tutorial",
+                    _id: { $nin: excludeCourseIds },
+                },
             },
             {
                 $lookup: {
-                    from: 'images',
-                    localField: 'image',
-                    foreignField: '_id',
-                    as: 'imageData'
-                }
+                    from: "images",
+                    localField: "image",
+                    foreignField: "_id",
+                    as: "imageData",
+                },
             },
             {
-                $unwind: { path: '$imageData', preserveNullAndEmptyArrays: true }
+                $unwind: { path: "$imageData", preserveNullAndEmptyArrays: true },
             },
             {
-                $match: { 'imageData.imageType': 'tutorial' } // Match only 'tutorial' images
-            },
-            {
-                $lookup: {
-                    from: 'instructors',
-                    localField: 'instructor',
-                    foreignField: '_id',
-                    as: 'instructorData'
-                }
-            },
-            {
-                $unwind: { path: '$instructorData', preserveNullAndEmptyArrays: true }
+                $match: { "imageData.imageType": "tutorial" },
             },
             {
                 $lookup: {
-                    from: 'categories',
-                    localField: 'category',
-                    foreignField: '_id',
-                    as: 'categoryData'
-                }
+                    from: "instructors",
+                    localField: "instructor",
+                    foreignField: "_id",
+                    as: "instructorData",
+                },
             },
             {
-                $unwind: { path: '$categoryData', preserveNullAndEmptyArrays: true }
+                $unwind: { path: "$instructorData", preserveNullAndEmptyArrays: true },
+            },
+            {
+                $lookup: {
+                    from: "categories",
+                    localField: "category",
+                    foreignField: "_id",
+                    as: "categoryData",
+                },
+            },
+            {
+                $unwind: { path: "$categoryData", preserveNullAndEmptyArrays: true },
             },
             {
                 $project: {
@@ -278,18 +290,20 @@ const getTutorialData = async (req, res) => {
                     description: 1,
                     price: 1,
                     duration: 1,
-                    image: { url: '$imageData.url', imageId: '$imageData.imageId' },
-                    instructor: { name: '$instructorData.name' },
-                    category: { name: '$categoryData.name' }
-                }
-            }
+                    image: { url: "$imageData.url", imageId: "$imageData.imageId" },
+                    instructor: { name: "$instructorData.name" },
+                    category: { name: "$categoryData.name" },
+                },
+            },
         ]);
+
         res.json(tutorialData);
     } catch (error) {
-        console.error('Error fetching card data:', error);
+        console.error("Error fetching card data:", error);
         return res.status(500).json({ error: error.message });
     }
 };
+
 
 const getProblemData = async (req, res) => {
     try {
@@ -378,6 +392,7 @@ const getCategoryData = async (req, res) => {
         return res.status(500).json({ error: 'Internal Server Error' });
     }
 }
+
 const detailedTutorialOrCourse = async (req, res) => {
     try {
         const Course = mongoose.model('Course')
@@ -407,12 +422,141 @@ const detailedTutorialOrCourse = async (req, res) => {
     }
 }
 
+const enrollNow = async (req, res) => {
+    try {
+        const { userId, courseId, courseType } = req.body;
+
+        const Subscription = mongoose.model("Subscription");
+
+        const filter = {
+            user: userId,
+            course: courseId,
+            courseType: courseType,
+        };
+
+        const operation = {
+            $set: {
+                user: userId,
+                course: courseId,
+                accessType: "free",
+                courseType: courseType,
+                status: "active",
+                payment: {
+                    method: "free",
+                    transactionId: null,
+                    amount: 0,
+                    originalAmount: 0,
+                    currency: "INR",
+                    status: "completed",
+                    providerResponse: { note: "Free access granted" },
+                },
+            },
+        };
+
+        const options = {
+            new: true,
+            upsert: true,
+            setDefaultsOnInsert: true,
+        };
+
+        const EnrollData = await Subscription.findOneAndUpdate(
+            filter,
+            operation,
+            options
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: "Enrolled successfully",
+            data: EnrollData,
+        });
+    } catch (error) {
+        console.error("Error in enrollNow:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to enroll",
+            error: error.message,
+        });
+    }
+};
+
+const userCourse = async (req, res) => {
+    try {
+        const { id } = req.query; // userId
+
+        const Subscription = mongoose.model("Subscription");
+        const UserCourses = await Subscription.aggregate([
+            {
+                $match: { user: new mongoose.Types.ObjectId(id) }
+            },
+            {
+                $lookup: {
+                    from: "courses",
+                    localField: "course",
+                    foreignField: "_id",
+                    as: "courseDetails"
+                }
+            },
+            { $unwind: "$courseDetails" },
+            {
+                $replaceRoot: { newRoot: "$courseDetails" }
+            },
+            {
+                $project: {
+                    
+                }
+            }
+        ]);
+
+        res.status(200).json({ success: true, courses: UserCourses });
+    } catch (error) {
+        console.error("Error fetching user courses:", error);
+        res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};
+const checkEnrollment = async (req, res) => {
+    try {
+        const { userId, courseId, courseType } = req.query;
+
+        // Validate required fields
+        if (!userId || !courseId || !courseType) {
+            return res
+                .status(400)
+                .json({ status: "failed", message: "userId, courseId, and courseType are required" });
+        }
+
+        // Validate ObjectIds
+        if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(courseId)) {
+            return res.status(400).json({ status: "failed", message: "Invalid userId or courseId" });
+        }
+
+        const Subscription = mongoose.model("Subscription");
+
+        const Subscribe = await Subscription.findOne({
+            user: userId,
+            course: courseId,
+            courseType: courseType,
+        });
+
+        if (Subscribe) {
+            return res.status(200).json({ status: "success", enrolled: true, data: Subscribe });
+        } else {
+            return res.status(200).json({ status: "success", enrolled: false });
+        }
+    } catch (error) {
+        console.error("check enrollment error", error);
+        return res.status(500).json({ status: "failed", message: "Server error", error: error.message });
+    }
+};
 
 
 
 
 
 
+
+indexController.checkEnrollment = checkEnrollment;
+indexController.userCourse = userCourse;
 indexController.getCourseData = getCourseData;
 indexController.getCarouselData = getCarouselData;
 indexController.getTutorialData = getTutorialData;
@@ -422,6 +566,7 @@ indexController.getProblemData = getProblemData;
 indexController.detailedTutorialOrCourse = detailedTutorialOrCourse;
 indexController.Profile = Profile;
 indexController.updateProfile = updateProfile;
+indexController.enrollNow = enrollNow;
 
 
 module.exports = indexController;

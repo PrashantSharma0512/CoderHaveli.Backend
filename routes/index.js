@@ -10,4 +10,7 @@ router.get('/get-instructor', index.getInstructorData);
 router.get('/get-category', index.getCategoryData);
 router.get('/get-problem', index.getProblemData);
 router.get('/get-detailed-tutorial', index.detailedTutorialOrCourse);
+router.post('/enroll-now',index.enrollNow)
+router.get('/get-user-course',index.userCourse)
+router.get('/check-enrollment',index.checkEnrollment)
 module.exports = router;    

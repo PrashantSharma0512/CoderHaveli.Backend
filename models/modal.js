@@ -352,20 +352,22 @@ module.exports = (mongoose) => ({
                 enum: ["free", "one-time", "subscription"],
                 default: "one-time"
             },
+            courseType: {
+                type: String,
+                enum: ["tutorial", "course"]
+            },
             subscriptionPlan: {
                 type: String,
-                enum: ["monthly", "yearly", "lifetime", null], 
+                enum: ["monthly", "yearly", "lifetime", null],
                 default: null
             },
             startDate: { type: Date, default: Date.now },
-            endDate: { type: Date }, 
+            endDate: { type: Date },
             status: {
                 type: String,
                 enum: ["active", "expired", "cancelled", "pending"],
                 default: "pending"
             },
-
-            // Payment info
             payment: {
                 method: {
                     type: String,
@@ -383,7 +385,7 @@ module.exports = (mongoose) => ({
                 },
                 providerResponse: { type: Object }, // store raw gateway response (Razorpay/Stripe/etc.)
             },
-
+            isDeleted: { type: Boolean, default: false },
             // Optional tracking
             coupon: { type: mongoose.Schema.Types.ObjectId, ref: "Coupon" },
             autoRenew: { type: Boolean, default: false }, // useful if you want auto-renewable plans
