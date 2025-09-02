@@ -69,7 +69,7 @@ const updateProfile = async (req, res) => {
             ...(phone && { phone }),
             updatedAt: new Date()
         };
-        console.log(avatar);
+       
 
         // Process avatar if provided as base64
         if (avatar) {
@@ -102,7 +102,7 @@ const updateProfile = async (req, res) => {
                 });
             }
         }
-        console.log(updateData, "data");
+        
 
         // Update user data
         const updatedUser = await User.findByIdAndUpdate(
@@ -234,7 +234,6 @@ const getTutorialData = async (req, res) => {
         const Subscription = mongoose.model("Subscription");
 
         let excludeCourseIds = [];
-        console.log(userId, "jjj");
 
         if (userId && mongoose.Types.ObjectId.isValid(userId)) {
             const subscriptions = await Subscription.find({ user: userId, isDeleted: false }).select("course");
@@ -484,7 +483,12 @@ const userCourse = async (req, res) => {
     try {
         const { id } = req.query; // userId
 
+        if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ success: false, message: "Invalid userId" });
+        }
+
         const Subscription = mongoose.model("Subscription");
+
         const UserCourses = await Subscription.aggregate([
             {
                 $match: { user: new mongoose.Types.ObjectId(id) }
@@ -497,13 +501,42 @@ const userCourse = async (req, res) => {
                     as: "courseDetails"
                 }
             },
-            { $unwind: "$courseDetails" },
+            { $unwind: { path: "$courseDetails", preserveNullAndEmptyArrays: true } },
             {
-                $replaceRoot: { newRoot: "$courseDetails" }
+                $lookup: {
+                    from: "instructors",
+                    localField: "courseDetails.instructor",
+                    foreignField: "_id",
+                    as: "instructor"
+                }
             },
+            { $unwind: { path: "$instructor", preserveNullAndEmptyArrays: true } },
+            {
+                $lookup: {
+                    from: "images",
+                    localField: "courseDetails.image",
+                    foreignField: "_id",
+                    as: "imageData"
+                }
+            },
+            { $unwind: { path: "$imageData", preserveNullAndEmptyArrays: true } },
             {
                 $project: {
-                    
+                    _id: 0, // hides subscription id
+                    accessType: 1,
+                    startDate: 1,
+                    endDate: 1,
+                    "courseDetails._id": 1,
+                    "courseDetails.title": 1,
+                    "courseDetails.description": 1,
+                    "courseDetails.price": 1,
+                    "courseDetails.duration": 1,
+                    courseImage: "$imageData", // return actual image doc
+                    " ._id": 1,
+                    "instructor.name": 1,
+                    "instructor.email": 1,
+                    "instructor.bio": 1,
+                    "instructor.image": 1
                 }
             }
         ]);
