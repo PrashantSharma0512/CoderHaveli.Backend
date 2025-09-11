@@ -1,240 +1,505 @@
-## First Response
+I'll create detailed ER diagrams for each collection in your MongoDB schema. Here's a comprehensive breakdown:
 
-You **don’t need to buy Judge0** — here's how you can still implement a **code execution engine for free** (or very cheaply):
-
----
-
-## 🛠️ Alternatives to Judge0 (Free/Open Source)
-
-### 1. **Use Judge0 Community Edition (Free Tier)**
-- [https://judge0.com](https://judge0.com)
-- They offer a **free hosted API** for small-scale personal/educational projects.
-- You can send requests like:
-  ```bash
-  POST https://ce.judge0.com/submissions?base64_encoded=false&wait=true
-  ```
-
-✅ Works well for:
-- C, C++, Java, Python, JavaScript, etc.
-
-> ⚠️ Limitation: It has rate limits and might not scale well for large user bases.
-
----
-
-### 2. **Self-host Judge0 (Recommended for Full Control)**
-- It’s **open-source** and you can host it yourself using Docker:
-  - GitHub Repo: [https://github.com/judge0/judge0](https://github.com/judge0/judge0)
-  - Set it up on:
-    - Free-tier **VPS** like Render, Fly.io, Railway
-    - Or on **your own PC/server** for local use
-
----
-
-### 3. **Docker-Based Custom Execution (Local or Server)**
-If you're comfortable with DevOps:
-
-- Build a backend that:
-  - Spins up temporary Docker containers
-  - Mounts user code
-  - Executes the code in a safe sandbox
-  - Returns the output
-
-✅ Pros:
-- Full control
-- No rate limit
-
-⚠️ Requires:
-- Docker knowledge
-- Secure sandboxing (so users can’t break the system)
-
----
-
-### 4. **Use Replit or GitHub Codespaces API (Experimental Workarounds)**
-- Use Replit’s embeddable editors or GitHub Codespaces in a limited way for advanced users.
-- Might be useful in tutorials rather than DSA problems.
-
----
-
-## 🧩 Suggestion For Now
-
-Since you're still building your platform and budget is a concern:
-
-### ✅ Use Judge0 Free API temporarily  
-→ and switch to **self-hosted** Judge0 once you grow 🚀
-
----
-
-Let me know if you'd like a **ready-made Express.js route** for Judge0 integration — I can write that for you too!
-
-
-## Second Response 
-
-Absolutely buddy! Let’s break down the **detailed alternatives to Judge0**—excluding the free tier (since we already covered that). I’ll explain **self-hosting Judge0**, **Docker-based execution**, and other creative solutions in a beginner-friendly, step-by-step way.
-
----
-
-## ⚙️ 1. **Self-host Judge0 on Your Server (Recommended)**
-
-### 🧠 What Is It?
-Judge0 is open-source software that compiles and runs code inside Docker containers. Hosting it yourself means you're not limited by rate limits or pricing.
-
----
-
-### 🧰 What You’ll Need:
-- Basic knowledge of Docker
-- A server to host it (can be free)
-- Git installed
-
----
-
-### 🚀 Step-by-Step Guide:
-
-#### ✅ Option A: Run on Localhost (for dev/testing)
-1. **Install Docker & Docker Compose**
-   ```bash
-   sudo apt update
-   sudo apt install docker docker-compose
-   ```
-
-2. **Clone the repo**
-   ```bash
-   git clone https://github.com/judge0/judge0.git
-   cd judge0
-   ```
-
-3. **Run Docker Compose**
-   ```bash
-   docker-compose up -d
-   ```
-
-4. Judge0 API will now be available at:  
-   ``
-
-You can send a POST request to `/submissions` with source code to compile and run.
-
----
-
-#### ✅ Option B: Host Online (e.g., Fly.io, Railway, Render)
-- All of them have **free tiers**
-- Use Dockerfile + `docker-compose.yml` to deploy
-- You get a **public URL** (e.g., `https://your-judge0.fly.dev`)
-
----
-
-### 📥 Example Request (from your Node.js app)
-```js
-const axios = require('axios');
-
-const res = await axios.post('/submissions', {
-  source_code: "print('Hello, World!')",
-  language_id: 71, // Python
-  stdin: ""
-});
-console.log(res.data.stdout); // Outputs: Hello, World!
-```
-
----
-
-## 🐳 2. **Docker-Based Custom Code Runner (Without Judge0)**
-
-If you want **more control**, you can make your **own lightweight version** of Judge0 using Docker.
-
----
-
-### 🧠 Idea:
-- Create a backend API that:
-  - Writes user code to a file
-  - Spins up a Docker container with the right language
-  - Mounts the file
-  - Runs the code and returns the result
-
----
-
-### 🔥 Example: Running Python
-
-#### Backend (Node.js + Docker):
-1. Install `dockerode`:
-   ```bash
-   npm install dockerode
-   ```
-
-2. Basic example code:
-```js
-const fs = require("fs");
-const Docker = require("dockerode");
-const docker = new Docker();
-
-async function runPython(code) {
-  fs.writeFileSync("code.py", code);
-  const stream = await docker.run(
-    "python:3.10",
-    ["python", "/mnt/code.py"],
-    process.stdout,
-    {
-      HostConfig: {
-        Binds: [`${__dirname}/code.py:/mnt/code.py`],
-      },
+```mermaid
+erDiagram
+    USER {
+        string _id
+        string name
+        string email
+        number phone
+        string password
+        string role
+        string bio
+        boolean isDeleted
+        boolean isVerified
+        string otp
+        date otpExpiry
+        string resetOtp
+        date resetOtpExpiry
+        date createdAt
+        date modifiedAt
+        string refreshToken
+        string avatar
+        string username
     }
-  );
-}
+
+    IMAGE {
+        ObjectId _id
+        number imageId
+        string url
+        string name
+        string imageType
+        date uploadedAt
+    }
+
+    COURSE {
+        ObjectId _id
+        string type
+        string title
+        string description
+        string about
+        string duration
+        array whatYouWillLearn
+        array requirements
+        array courseIncludes
+        number price
+        number originalPrice
+        ObjectId image
+        ObjectId instructor
+        ObjectId category
+        array lessons
+        date createdAt
+        date modifiedAt
+    }
+    
+    INSTRUCTOR {
+        ObjectId _id
+        string name
+        string email
+        string bio
+        ObjectId image
+        string rating
+        date createdAt
+    }
+    
+    CATEGORY {
+        ObjectId _id
+        string name
+    }
+    
+    CODE {
+        ObjectId _id
+        string quesId
+        ObjectId userId
+        string code
+        string codelanguage
+        date createdAt
+        date modifiedAt
+    }
+    
+    TESTCASE {
+        ObjectId _id
+        string quesId
+        string input
+        string output
+        string explaination
+        number timeLimit
+        number memoryLimit
+    }
+    
+    PROBLEMLIST {
+        ObjectId _id
+        string quesId
+        string quesName
+        string quesDesc
+        string difficulty
+        ObjectId problemExample
+        array code
+        ObjectId contraints
+        array tags
+        date createdAt
+        date modifiedAt
+    }
+    
+    CONSTRAINTS {
+        ObjectId _id
+        string quesId
+        array contraints
+    }
+    
+    HINT {
+        ObjectId _id
+        string quesId
+        array hints
+    }
+    
+    SUBMISSION {
+        ObjectId _id
+        string quesId
+        ObjectId code
+        string codelanguage
+        ObjectId userId
+        string status
+        string execution_time
+        date createdAt
+        date modifiedAt
+    }
+    
+    APPROACHES {
+        ObjectId _id
+        string quesId
+        string approachName
+        string approachDesc
+        string approachType
+        object code
+        string time_complexity
+        string space_complexity
+        string videoUrl
+        number order
+        date createdAt
+        date modifiedAt
+    }
+    
+    PROGRESS {
+        ObjectId _id
+        string quesId
+        string userID
+        string progress
+        date createdAt
+        date modifiedAt
+    }
+    
+    COMMUNITY {
+        ObjectId _id
+        ObjectId problem
+        ObjectId author
+        string question
+        array answers
+        date createdAt
+        date modifiedAt
+    }
+    
+    STARTERCODE {
+        ObjectId _id
+        string quesId
+        string language
+        string code
+        date createdAt
+        date modifiedAt
+    }
+    
+    COMMENT {
+        ObjectId _id
+        string quesId
+        ObjectId author
+        ObjectId parentComment
+        string type
+        string content
+        array likes
+        boolean isEdited
+        boolean isDeleted
+        date createdAt
+        date updatedAt
+    }
+    
+    SUBSCRIPTION {
+        ObjectId _id
+        ObjectId user
+        ObjectId course
+        string accessType
+        string courseType
+        string subscriptionPlan
+        date startDate
+        date endDate
+        string status
+        object payment
+        boolean isDeleted
+        ObjectId coupon
+        boolean autoRenew
+    }
+    
+    COUPON {
+        ObjectId _id
+        string code
+        string discountType
+        number discountValue
+        number maxDiscount
+        string applicableTo
+        ObjectId course
+        ObjectId category
+        ObjectId user
+        date startDate
+        date endDate
+        number usageLimit
+        number usageCount
+        number perUserLimit
+        boolean isActive
+    }
+
+    USER ||--o{ SUBSCRIPTION : "has"
+    USER ||--o{ CODE : "writes"
+    USER ||--o{ SUBMISSION : "makes"
+    USER ||--o{ COMMENT : "writes"
+    USER ||--o{ PROGRESS : "tracks"
+    USER ||--o{ COMMUNITY : "participates in"
+    
+    COURSE ||--o{ SUBSCRIPTION : "has"
+    COURSE ||--o{ LESSON : "contains"
+    COURSE ||--|| IMAGE : "has"
+    COURSE ||--|| CATEGORY : "belongs to"
+    COURSE ||--|| INSTRUCTOR : "taught by"
+    
+    PROBLEMLIST ||--o{ TESTCASE : "has"
+    PROBLEMLIST ||--o{ CODE : "has"
+    PROBLEMLIST ||--o{ APPROACHES : "has"
+    PROBLEMLIST ||--o{ COMMENT : "has"
+    PROBLEMLIST ||--o{ COMMUNITY : "discusses"
+    PROBLEMLIST ||--o{ STARTERCODE : "has"
+    PROBLEMLIST ||--o{ PROGRESS : "tracks"
+    PROBLEMLIST ||--o{ CONSTRAINTS : "has"
+    PROBLEMLIST ||--o{ HINT : "has"
+    
+    SUBSCRIPTION }o--|| COUPON : "uses"
+    
+    IMAGE ||--o{ INSTRUCTOR : "uses"
+    
+    COMMENT ||--o{ COMMENT : "replies to"
 ```
 
-This spins up a Python container and runs your script safely inside.
+## Detailed Collection Relationships
 
----
-
-### 🛡️ Security Measures
-- Timeouts
-- Memory limits
-- Language-specific containers (e.g., `gcc`, `node`, `openjdk`, etc.)
-- No internet access for the container
-
-> ⚠️ Always validate and sanitize input! Code execution can be dangerous.
-
----
-
-## 🧪 3. **Creative Workarounds (Low-Priority)**
-
-### 🧩 Option A: Embed **Replit** Code Runner
-- Embed code execution using their widgets:
-  ```html
-  <iframe height="500px" width="100%" src="https://replit.com/@username/project?lite=true"></iframe>
-  ```
-- Good for tutorials, not for live judging.
-
----
-
-### 🧩 Option B: Browser-Based Execution (for JavaScript only)
-- For JS code, you can execute directly on the browser:
-```js
-try {
-  const result = eval(userInputCode);
-  console.log(result);
-} catch (err) {
-  console.log("Error:", err.message);
-}
+### User Collection Relationships
+```mermaid
+erDiagram
+    USER ||--o{ SUBSCRIPTION : "has"
+    USER ||--o{ CODE : "writes"
+    USER ||--o{ SUBMISSION : "makes"
+    USER ||--o{ COMMENT : "writes"
+    USER ||--o{ PROGRESS : "tracks"
+    USER ||--o{ COMMUNITY : "participates in"
+    
+    USER {
+        string _id
+        string name
+        string email
+        number phone
+        string password
+        string role
+        string bio
+        boolean isDeleted
+        boolean isVerified
+        string otp
+        date otpExpiry
+        string resetOtp
+        date resetOtpExpiry
+        date createdAt
+        date modifiedAt
+        string refreshToken
+        string avatar
+        string username
+    }
 ```
-- ❌ Unsafe for server-side problems (no file I/O or constraints)
 
----
+### Course Collection Relationships
+```mermaid
+erDiagram
+    COURSE ||--o{ SUBSCRIPTION : "has"
+    COURSE ||--o{ LESSON : "contains"
+    COURSE ||--|| IMAGE : "has"
+    COURSE ||--|| CATEGORY : "belongs to"
+    COURSE ||--|| INSTRUCTOR : "taught by"
+    
+    COURSE {
+        ObjectId _id
+        string type
+        string title
+        string description
+        string about
+        string duration
+        array whatYouWillLearn
+        array requirements
+        array courseIncludes
+        number price
+        number originalPrice
+        ObjectId image
+        ObjectId instructor
+        ObjectId category
+        array lessons
+        date createdAt
+        date modifiedAt
+    }
+    
+    LESSON {
+        string title
+        string content
+        string videoUrl
+        string description
+        string duration
+    }
+```
 
-## 📌 Which One Should You Pick?
+### Problem Management Relationships
+```mermaid
+erDiagram
+    PROBLEMLIST ||--o{ TESTCASE : "has"
+    PROBLEMLIST ||--o{ CODE : "has"
+    PROBLEMLIST ||--o{ APPROACHES : "has"
+    PROBLEMLIST ||--o{ COMMENT : "has"
+    PROBLEMLIST ||--o{ COMMUNITY : "discusses"
+    PROBLEMLIST ||--o{ STARTERCODE : "has"
+    PROBLEMLIST ||--o{ PROGRESS : "tracks"
+    PROBLEMLIST ||--o{ CONSTRAINTS : "has"
+    PROBLEMLIST ||--o{ HINT : "has"
+    
+    PROBLEMLIST {
+        ObjectId _id
+        string quesId
+        string quesName
+        string quesDesc
+        string difficulty
+        ObjectId problemExample
+        array code
+        ObjectId contraints
+        array tags
+        date createdAt
+        date modifiedAt
+    }
+    
+    TESTCASE {
+        ObjectId _id
+        string quesId
+        string input
+        string output
+        string explaination
+        number timeLimit
+        number memoryLimit
+    }
+    
+    APPROACHES {
+        ObjectId _id
+        string quesId
+        string approachName
+        string approachDesc
+        string approachType
+        object code
+        string time_complexity
+        string space_complexity
+        string videoUrl
+        number order
+        date createdAt
+        date modifiedAt
+    }
+```
 
-| Option                   | Cost  | Skill Level | Speed | Security | Best For                    |
-|--------------------------|-------|-------------|-------|----------|-----------------------------|
-| Self-host Judge0         | Free  | Medium      | Fast  | ✅ High   | Full DSA support            |
-| Custom Docker Execution  | Free  | Medium-High | Fast  | ✅ High   | Custom logic, full control  |
-| Replit Embeds            | Free  | Low         | Okay  | ❌ Low    | Tutorials / Playgrounds     |
-| JS Eval (in-browser)     | Free  | Easy        | Fast  | ❌ None   | Quick JS-only testing       |
+### Subscription and Payment Relationships
+```mermaid
+erDiagram
+    SUBSCRIPTION }o--|| COUPON : "uses"
+    USER ||--o{ SUBSCRIPTION : "has"
+    COURSE ||--o{ SUBSCRIPTION : "has"
+    
+    SUBSCRIPTION {
+        ObjectId _id
+        ObjectId user
+        ObjectId course
+        string accessType
+        string courseType
+        string subscriptionPlan
+        date startDate
+        date endDate
+        string status
+        object payment
+        boolean isDeleted
+        ObjectId coupon
+        boolean autoRenew
+    }
+    
+    PAYMENT {
+        string method
+        string transactionId
+        number amount
+        number originalAmount
+        string currency
+        string status
+        object providerResponse
+    }
+    
+    COUPON {
+        ObjectId _id
+        string code
+        string discountType
+        number discountValue
+        number maxDiscount
+        string applicableTo
+        ObjectId course
+        ObjectId category
+        ObjectId user
+        date startDate
+        date endDate
+        number usageLimit
+        number usageCount
+        number perUserLimit
+        boolean isActive
+    }
+```
 
----
+### Community and Comment Relationships
+```mermaid
+erDiagram
+    COMMENT ||--o{ COMMENT : "replies to"
+    USER ||--o{ COMMENT : "writes"
+    PROBLEMLIST ||--o{ COMMENT : "has"
+    
+    COMMENT {
+        ObjectId _id
+        string quesId
+        ObjectId author
+        ObjectId parentComment
+        string type
+        string content
+        array likes
+        boolean isEdited
+        boolean isDeleted
+        date createdAt
+        date updatedAt
+    }
+    
+    COMMUNITY {
+        ObjectId _id
+        ObjectId problem
+        ObjectId author
+        string question
+        array answers
+        date createdAt
+        date modifiedAt
+    }
+    
+    ANSWER {
+        ObjectId author
+        string answer
+        date createdAt
+    }
+```
 
-## ✅ My Suggestion for You:
+## Indexing Recommendations
 
-Start with:
-> 🔹 **Self-hosting Judge0** using Docker — most practical, scalable, and secure  
-> 🔹 Use free VPS (e.g., [Fly.io](https://fly.io), [Render](https://render.com), [Railway](https://railway.app)) to deploy it for zero cost
+Based on the schema analysis, here are the recommended indexes:
 
-And I’ll help you step by step if you need help setting that up 💻
+1. **User Collection**:
+   - `email: 1` (unique)
+   - `phone: 1` (unique)
+   - `username: 1` (unique)
+   - `role: 1`
+   - `isVerified: 1`
 
-Would you like me to generate a full Express API boilerplate with `/submit` endpoint that talks to Judge0 or Docker?
+2. **Course Collection**:
+   - `type: 1`
+   - `instructor: 1`
+   - `category: 1`
+   - `price: 1`
+   - `createdAt: -1`
+
+3. **ProblemList Collection**:
+   - `quesId: 1` (unique)
+   - `difficulty: 1`
+   - `tags: 1`
+   - `createdAt: -1`
+
+4. **Subscription Collection**:
+   - `user: 1, course: 1` (compound)
+   - `status: 1`
+   - `endDate: 1`
+   - `subscriptionPlan: 1`
+
+5. **Code Collection**:
+   - `userId: 1, quesId: 1` (compound)
+   - `codelanguage: 1`
+   - `createdAt: -1`
+
+6. **Comment Collection**:
+   - `quesId: 1`
+   - `author: 1`
+   - `parentComment: 1`
+   - `type: 1`
+
+This detailed ER diagram representation shows all collections with their fields and relationships, providing a comprehensive view of your MongoDB schema structure.
