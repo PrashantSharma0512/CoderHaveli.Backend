@@ -69,7 +69,7 @@ const updateProfile = async (req, res) => {
             ...(phone && { phone }),
             updatedAt: new Date()
         };
-       
+
 
         // Process avatar if provided as base64
         if (avatar) {
@@ -102,7 +102,7 @@ const updateProfile = async (req, res) => {
                 });
             }
         }
-        
+
 
         // Update user data
         const updatedUser = await User.findByIdAndUpdate(
@@ -157,11 +157,21 @@ const updateProfile = async (req, res) => {
 const getCourseData = async (req, res) => {
     try {
         const Course = mongoose.model('Course');
+        const Subscription = mongoose.model("Subscription");
+        const { userId } = req.query
+        let excludeCourseIds = [];
+
+        if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+            const subscriptions = await Subscription.find({ user: userId, isDeleted: false, courseType: "course" }).select("course");
+            excludeCourseIds = subscriptions.map((s) => s.course);
+        }
 
         const courseData = await Course.aggregate([
             {
                 $match: {
-                    type: "course"
+                    type: "course",
+                    _id: { $nin: excludeCourseIds },
+                    isDeleted: false
                 }
             },
             {
@@ -236,7 +246,7 @@ const getTutorialData = async (req, res) => {
         let excludeCourseIds = [];
 
         if (userId && mongoose.Types.ObjectId.isValid(userId)) {
-            const subscriptions = await Subscription.find({ user: userId, isDeleted: false }).select("course");
+            const subscriptions = await Subscription.find({ user: userId, isDeleted: false, courseType: "tutorial" }).select("course");
             excludeCourseIds = subscriptions.map((s) => s.course);
         }
 
@@ -245,6 +255,7 @@ const getTutorialData = async (req, res) => {
                 $match: {
                     type: "tutorial",
                     _id: { $nin: excludeCourseIds },
+                    isDeleted: false
                 },
             },
             {
@@ -425,13 +436,22 @@ const enrollNow = async (req, res) => {
     try {
         const { userId, courseId, courseType } = req.body;
 
+        if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(courseId)) {
+            return res.status(400).json({ success: false, message: "Invalid userId or courseId" });
+        }
+
         const Subscription = mongoose.model("Subscription");
 
         const filter = {
             user: userId,
             course: courseId,
             courseType: courseType,
+            isDeleted: false
         };
+
+        const now = new Date();
+        const endDate = new Date();
+        endDate.setFullYear(now.getFullYear() + 1); // Example: 1 year subscription period
 
         const operation = {
             $set: {
@@ -440,6 +460,8 @@ const enrollNow = async (req, res) => {
                 accessType: "free",
                 courseType: courseType,
                 status: "active",
+                startDate: now,
+                endDate: endDate,
                 payment: {
                     method: "free",
                     transactionId: null,
@@ -449,6 +471,7 @@ const enrollNow = async (req, res) => {
                     status: "completed",
                     providerResponse: { note: "Free access granted" },
                 },
+                isDeleted: false
             },
         };
 
@@ -458,11 +481,7 @@ const enrollNow = async (req, res) => {
             setDefaultsOnInsert: true,
         };
 
-        const EnrollData = await Subscription.findOneAndUpdate(
-            filter,
-            operation,
-            options
-        );
+        const EnrollData = await Subscription.findOneAndUpdate(filter, operation, options);
 
         return res.status(200).json({
             success: true,
@@ -479,6 +498,7 @@ const enrollNow = async (req, res) => {
     }
 };
 
+
 const userCourse = async (req, res) => {
     try {
         const { id } = req.query; // userId
@@ -491,7 +511,7 @@ const userCourse = async (req, res) => {
 
         const UserCourses = await Subscription.aggregate([
             {
-                $match: { user: new mongoose.Types.ObjectId(id) }
+                $match: { user: new mongoose.Types.ObjectId(id), isDeleted: false }
             },
             {
                 $lookup: {
@@ -569,6 +589,7 @@ const checkEnrollment = async (req, res) => {
             user: userId,
             course: courseId,
             courseType: courseType,
+            isDeleted: false
         });
 
         if (Subscribe) {
@@ -581,6 +602,31 @@ const checkEnrollment = async (req, res) => {
         return res.status(500).json({ status: "failed", message: "Server error", error: error.message });
     }
 };
+const cancelSubscription = async (req, res) => {
+    try {
+        const { courseId, userId, courseType } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(courseId)) {
+            return res.status(400).json({ success: false, message: "Invalid userId or courseId" });
+        }
+
+        const Subscription = mongoose.model('Subscription');
+
+        const cancel_sub = await Subscription.updateOne(
+            { course: courseId, user: userId, courseType, isDeleted: false },
+            { $set: { isDeleted: true, status: "cancelled" } }
+        );
+
+        if (cancel_sub.modifiedCount > 0) {
+            res.status(200).json({ success: true, message: "Subscription cancelled successfully" });
+        } else {
+            res.status(404).json({ success: false, message: "Subscription not found or already cancelled" });
+        }
+    } catch (error) {
+        console.error("Error while cancelling subscription:", error);
+        res.status(500).json({ success: false, message: "Internal server error", error: error.message });
+    }
+};
 
 
 
@@ -588,6 +634,7 @@ const checkEnrollment = async (req, res) => {
 
 
 
+indexController.cancelSubscription = cancelSubscription;
 indexController.checkEnrollment = checkEnrollment;
 indexController.userCourse = userCourse;
 indexController.getCourseData = getCourseData;

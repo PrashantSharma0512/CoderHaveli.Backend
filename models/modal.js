@@ -120,7 +120,8 @@ module.exports = (mongoose) => ({
                 duration: String
             }],
             createdAt: { type: Date, default: Date.now },
-            modifiedAt: { type: Date, default: Date.now }
+            modifiedAt: { type: Date, default: Date.now },
+            isDeleted: { type: Boolean, default: false }
         })
     ),
     Instructor: mongoose.model(

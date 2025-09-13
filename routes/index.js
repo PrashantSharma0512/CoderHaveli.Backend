@@ -1,6 +1,8 @@
 const router = require('express').Router();
 const index = require('../controllers/indexController');
 const multer = require('../utils/multer');
+
+
 router.get('/get-profile', index.Profile);
 router.put('/update-profile', index.updateProfile);
 router.get('/get-courses', index.getCourseData);
@@ -10,7 +12,8 @@ router.get('/get-instructor', index.getInstructorData);
 router.get('/get-category', index.getCategoryData);
 router.get('/get-problem', index.getProblemData);
 router.get('/get-detailed-tutorial', index.detailedTutorialOrCourse);
-router.post('/enroll-now',index.enrollNow)
-router.get('/get-user-course',index.userCourse)
-router.get('/check-enrollment',index.checkEnrollment)
+router.post('/enroll-now', index.enrollNow)
+router.post('/cancel-subscription', index.cancelSubscription)
+router.get('/get-user-course', index.userCourse)
+router.get('/check-enrollment', index.checkEnrollment)
 module.exports = router;    
