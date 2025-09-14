@@ -429,13 +429,27 @@ module.exports = (mongoose) => ({
             // Validity
             startDate: { type: Date, default: Date.now },
             endDate: { type: Date },
-            usageLimit: { type: Number, default: null }, // max times coupon can be used (global)
-            usageCount: { type: Number, default: 0 }, // how many times it’s already used
-            perUserLimit: { type: Number, default: 1 }, // how many times a single user can use
+            usageLimit: { type: Number, default: null },
+            usageCount: { type: Number, default: 0 },
+            perUserLimit: { type: Number, default: 1 },
 
             isActive: { type: Boolean, default: true }
         })
     ),
+    cartSchema: mongoose.model(
+        'Cart',
+        new mongoose.Schema({
+            user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+            items: [
+                {
+                    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true },
+                    quantity: { type: Number, default: 1 },
+                }
+            ],
+            updatedAt: { type: Date, default: Date.now },
+        })
+    ),
+
 
 
     email: { type: String, required: true, unique: true, index: true },
