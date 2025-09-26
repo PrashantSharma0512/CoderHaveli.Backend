@@ -1,7 +1,7 @@
 const indexController = {}
 const mongoose = require('mongoose');
 const { uploadDirectly } = require('../utils/Upload');
-const fs = require('fs')
+const connectRedis = require("../utils/redis");
 
 const Profile = async (req, res) => {
     try {
@@ -154,15 +154,31 @@ const updateProfile = async (req, res) => {
     }
 };
 
+
+
 const getCourseData = async (req, res) => {
     try {
-        const Course = mongoose.model('Course');
+        const Course = mongoose.model("Course");
         const Subscription = mongoose.model("Subscription");
-        const { userId } = req.query
-        let excludeCourseIds = [];
+        const { userId } = req.query;
 
+        const client = await connectRedis();
+
+        const cacheKey = userId ? `courses:user:${userId}` : "courses:all";
+
+        const cached = await client.get(cacheKey);
+        if (cached) {
+            console.info("Data Are Come From Redis")
+            return res.json(JSON.parse(cached));
+        }
+
+        let excludeCourseIds = [];
         if (userId && mongoose.Types.ObjectId.isValid(userId)) {
-            const subscriptions = await Subscription.find({ user: userId, isDeleted: false, courseType: "course" }).select("course");
+            const subscriptions = await Subscription.find({
+                user: userId,
+                isDeleted: false,
+                courseType: "course",
+            }).select("course");
             excludeCourseIds = subscriptions.map((s) => s.course);
         }
 
@@ -171,38 +187,42 @@ const getCourseData = async (req, res) => {
                 $match: {
                     type: "course",
                     _id: { $nin: excludeCourseIds },
-                    isDeleted: false
-                }
+                    isDeleted: false,
+                },
             },
             {
                 $lookup: {
-                    from: 'images', // Collection name for Image model
-                    localField: 'image',
-                    foreignField: '_id',
-                    as: 'imageData'
-                }
+                    from: "images",
+                    localField: "image",
+                    foreignField: "_id",
+                    as: "imageData",
+                },
             },
-            { $unwind: { path: '$imageData', preserveNullAndEmptyArrays: true } }, // Flatten imageData array
+            { $unwind: { path: "$imageData", preserveNullAndEmptyArrays: true } },
             {
                 $lookup: {
-                    from: 'instructors', // Collection name for Instructor model
-                    localField: 'instructor',
-                    foreignField: '_id',
-                    as: 'instructorData'
-                }
+                    from: "instructors",
+                    localField: "instructor",
+                    foreignField: "_id",
+                    as: "instructorData",
+                },
             },
-            { $unwind: { path: '$instructorData', preserveNullAndEmptyArrays: true } }, // Flatten instructorData array
+            {
+                $unwind: { path: "$instructorData", preserveNullAndEmptyArrays: true },
+            },
             {
                 $lookup: {
-                    from: 'categories', // Collection name for Category model
-                    localField: 'category',
-                    foreignField: '_id',
-                    as: 'categoryData'
-                }
+                    from: "categories",
+                    localField: "category",
+                    foreignField: "_id",
+                    as: "categoryData",
+                },
             },
-            { $unwind: { path: '$categoryData', preserveNullAndEmptyArrays: true } }, // Flatten categoryData array
             {
-                $match: { 'imageData.imageType': 'course' } // Filter images with type 'course'
+                $unwind: { path: "$categoryData", preserveNullAndEmptyArrays: true },
+            },
+            {
+                $match: { "imageData.imageType": "course" },
             },
             {
                 $project: {
@@ -210,18 +230,21 @@ const getCourseData = async (req, res) => {
                     description: 1,
                     price: 1,
                     duration: 1,
-                    'image.url': '$imageData.url',
-                    'image.imageId': '$imageData.imageId',
-                    'instructor.name': '$instructorData.name',
-                    'category.name': '$categoryData.name'
-                }
-            }
+                    "image.url": "$imageData.url",
+                    "image.imageId": "$imageData.imageId",
+                    "instructor.name": "$instructorData.name",
+                    "category.name": "$categoryData.name",
+                },
+            },
         ]);
+
+
+        await client.set(cacheKey, JSON.stringify(courseData), { EX: 600 });
 
         res.json(courseData);
     } catch (error) {
-        console.error('Error fetching course data:', error);
-        return res.status(500).json({ error: 'Internal Server Error' });
+        console.error("Error fetching course data:", error);
+        return res.status(500).json({ error: "Internal Server Error" });
     }
 };
 const getCarouselData = async (req, res) => {
@@ -242,6 +265,15 @@ const getTutorialData = async (req, res) => {
         const { userId } = req.query;
         const Course = mongoose.model("Course");
         const Subscription = mongoose.model("Subscription");
+
+        const client = await connectRedis();
+
+        const cacheKey = userId ? `tutorial:user:${userId}` : "tutorial:all";
+
+        const cached = await client.get(cacheKey);
+        if (cached) {
+            return res.json(JSON.parse(cached));
+        }
 
         let excludeCourseIds = [];
 
@@ -306,7 +338,7 @@ const getTutorialData = async (req, res) => {
                 },
             },
         ]);
-
+        await client.set(cacheKey, JSON.stringify(tutorialData), { EX: 600 });
         res.json(tutorialData);
     } catch (error) {
         console.error("Error fetching card data:", error);
@@ -318,6 +350,15 @@ const getTutorialData = async (req, res) => {
 const getProblemData = async (req, res) => {
     try {
         const ProblemList = mongoose.model('ProblemList');
+        const client = await connectRedis();
+
+        const cacheKey = 'problem-data';
+
+        const cached = await client.get(cacheKey);
+        if (cached) {
+            console.info("Data Are Come From Redis")
+            return res.json(JSON.parse(cached));
+        }
 
         const problemData = await ProblemList.aggregate([
             {
@@ -373,7 +414,7 @@ const getProblemData = async (req, res) => {
                 }
             }
         ]);
-
+        await client.set(cacheKey, JSON.stringify(problemData), { EX: 600 });
         res.json(problemData);
     } catch (error) {
         console.error('Error fetching problem data:', error);

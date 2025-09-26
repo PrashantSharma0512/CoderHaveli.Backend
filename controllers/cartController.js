@@ -18,10 +18,16 @@ const removeItem = async (req, res) => {
 
 const getCartItems = async (req, res) => {
     const Cart = mongoose.model('Cart')
-    const userId = req.user.id;
-    const cart = await Cart.findOne({ user: userId }).populate('items.productId');
-
-    res.json(cart);
+    const { id } = req.query;
+    if (!id) {
+        throw new Error("Id is Required")
+    }
+    
+    // const cart = await Cart.findOne({ user: id })
+    // .populate('items.productId');
+    
+    // console.log(cart);
+    // res.json(cart);
 }
 
 const addItems = async (req, res) => {
@@ -42,7 +48,7 @@ const addItems = async (req, res) => {
         }
 
         await cart.save();
-        res.json({success: true , cart});
+        res.json({ success: true, cart });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
