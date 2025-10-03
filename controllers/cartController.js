@@ -4,8 +4,7 @@ const cartController = {}
 
 const removeItem = async (req, res) => {
     const Cart = mongoose.model('Cart')
-    const { productId } = req.body;
-    const userId = req.user.id;
+    const { productId,userId } = req.body;
 
     const cart = await Cart.findOne({ user: userId });
     if (!cart) return res.status(404).json({ message: 'Cart not found' });
@@ -17,18 +16,46 @@ const removeItem = async (req, res) => {
 }
 
 const getCartItems = async (req, res) => {
-    const Cart = mongoose.model('Cart')
+    const Cart = mongoose.model('Cart');
     const { id } = req.query;
+
     if (!id) {
-        throw new Error("Id is Required")
+        return res.status(400).json({ success: false, message: "Id is required" });
     }
-    
-    // const cart = await Cart.findOne({ user: id })
-    // .populate('items.productId');
-    
-    // console.log(cart);
-    // res.json(cart);
-}
+
+    try {
+        const cart = await Cart.findOne({ user: id })
+            .populate({
+                path: 'items.productId',
+                select: '_id type title duration price image category',
+                populate: [
+                    { path: 'image', select: '_id url' },
+                    { path: 'category', select: '_id name' }
+                ]
+            });
+
+        if (!cart) {
+            return res.status(404).json({ success: false, message: "No items found in cart" });
+        }
+
+        // Map items to only include product data
+        const simplifiedItems = cart.items.map(item => ({
+            _id: item.productId._id,
+            type: item.productId.type,
+            title: item.productId.title,
+            duration: item.productId.duration,
+            price: item.productId.price,
+            image: item.productId.image,       // populated image
+            category: item.productId.category  // populated category
+        }));
+
+        res.status(200).json({ success: true, cart: simplifiedItems });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+};
+
 
 const addItems = async (req, res) => {
     const Cart = mongoose.model('Cart')

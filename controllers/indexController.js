@@ -154,8 +154,6 @@ const updateProfile = async (req, res) => {
     }
 };
 
-
-
 const getCourseData = async (req, res) => {
     try {
         const Course = mongoose.model("Course");
@@ -163,6 +161,7 @@ const getCourseData = async (req, res) => {
         const { userId } = req.query;
 
         const client = await connectRedis();
+        // const client = 'hhh';
 
         const cacheKey = userId ? `courses:user:${userId}` : "courses:all";
 
@@ -239,7 +238,7 @@ const getCourseData = async (req, res) => {
         ]);
 
 
-        await client.set(cacheKey, JSON.stringify(courseData), { EX: 600 });
+        await client.set(cacheKey, JSON.stringify(courseData), { EX: 6000 });
 
         res.json(courseData);
     } catch (error) {
@@ -247,6 +246,7 @@ const getCourseData = async (req, res) => {
         return res.status(500).json({ error: "Internal Server Error" });
     }
 };
+
 const getCarouselData = async (req, res) => {
     try {
         const Image = mongoose.model('Image');
@@ -338,14 +338,13 @@ const getTutorialData = async (req, res) => {
                 },
             },
         ]);
-        await client.set(cacheKey, JSON.stringify(tutorialData), { EX: 600 });
+        await client.set(cacheKey, JSON.stringify(tutorialData), { EX: 6000 });
         res.json(tutorialData);
     } catch (error) {
         console.error("Error fetching card data:", error);
         return res.status(500).json({ error: error.message });
     }
 };
-
 
 const getProblemData = async (req, res) => {
     try {
@@ -539,7 +538,6 @@ const enrollNow = async (req, res) => {
     }
 };
 
-
 const userCourse = async (req, res) => {
     try {
         const { id } = req.query; // userId
@@ -608,6 +606,7 @@ const userCourse = async (req, res) => {
         res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
+
 const checkEnrollment = async (req, res) => {
     try {
         const { userId, courseId, courseType } = req.query;
@@ -643,6 +642,7 @@ const checkEnrollment = async (req, res) => {
         return res.status(500).json({ status: "failed", message: "Server error", error: error.message });
     }
 };
+
 const cancelSubscription = async (req, res) => {
     try {
         const { courseId, userId, courseType } = req.body;
@@ -668,6 +668,8 @@ const cancelSubscription = async (req, res) => {
         res.status(500).json({ success: false, message: "Internal server error", error: error.message });
     }
 };
+
+
 
 
 
