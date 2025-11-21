@@ -1,7 +1,8 @@
 const router = require('express').Router();
 const index = require('../controllers/indexController');
 const multer = require('../utils/multer');
-const Authenicated = require('../middlewares/Auth')
+const Authenicated = require('../middlewares/Auth');
+const { default: mongoose } = require('mongoose');
 
 router.get('/get-courses', index.getCourseData);
 router.get('/get-carousel', index.getCarouselData);
@@ -17,4 +18,7 @@ router.post('/enroll-now', Authenicated, index.enrollNow)
 router.post('/cancel-subscription', Authenicated, index.cancelSubscription)
 router.get('/get-user-course', Authenicated, index.userCourse)
 router.get('/check-enrollment', Authenicated, index.checkEnrollment)
+
+
+router.post('/get-course-details',Authenicated, index.getCourseDetails)
 module.exports = router;    

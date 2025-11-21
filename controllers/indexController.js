@@ -669,6 +669,71 @@ const cancelSubscription = async (req, res) => {
     }
 };
 
+const getCourseDetails = async (req, res) => {
+    const { id, type } = req.body;
+    const Course = mongoose.model('Course');
+    try {
+        const courseData = await Course.aggregate([
+            { $match: { _id: new mongoose.Types.ObjectId(id), type: type, isDeleted: false } },
+            {
+                $lookup: {
+                    from: "instructors",
+                    localField: "instructor",
+                    foreignField: "_id",
+                    as: "instructor"
+                }
+            },
+            { $unwind: "$instructor" },
+            {
+                $lookup: {
+                    from: "categories",
+                    localField: "category",
+                    foreignField: "_id",
+                    as: "category"
+                }
+            },
+            { $unwind: "$category" },
+            {
+                $lookup: {
+                    from: "images",
+                    localField: "image",
+                    foreignField: "_id",
+                    as: "imagesdata"
+                }
+            },
+            { $unwind: "$imagesdata" },
+            {
+                $project: {
+                    _id: 1,
+                    title: 1,
+                    description: 1,
+                    price: 1,
+                    instructor: {
+                        _id: "$instructor._id",
+                        name: "$instructor.name",
+                        bio: "$instructor.bio"
+                    },
+                    category: {
+                        _id: "$category._id",
+                        name: "$category.name"
+                    },
+                    image: "$imagesdata.url"
+                }
+            }
+        ]);
+
+        return res.json({
+            success: true,
+            data: courseData[0] || null
+        });
+
+        res.json({ success: true, data: courseData })
+    } catch (error) {
+        console.error(error);
+
+    }
+
+}
 
 
 
@@ -690,6 +755,7 @@ indexController.detailedTutorialOrCourse = detailedTutorialOrCourse;
 indexController.Profile = Profile;
 indexController.updateProfile = updateProfile;
 indexController.enrollNow = enrollNow;
+indexController.getCourseDetails = getCourseDetails;
 
 
 module.exports = indexController;
