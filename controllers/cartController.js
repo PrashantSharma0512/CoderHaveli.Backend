@@ -3,16 +3,22 @@ const { default: mongoose } = require("mongoose");
 const cartController = {}
 
 const removeItem = async (req, res) => {
-    const Cart = mongoose.model('Cart')
-    const { productId,userId } = req.body;
+    try {
+        const Cart = mongoose.model('Cart')
+        const { productId, userId } = req.body;
 
-    const cart = await Cart.findOne({ user: userId });
-    if (!cart) return res.status(404).json({ message: 'Cart not found' });
+        const cart = await Cart.findOne({ user: userId });
+        if (!cart) return res.status(404).json({ message: 'Cart not found' });
 
-    cart.items = cart.items.filter(i => i.productId.toString() !== productId);
-    await cart.save();
+        cart.items = cart.items.filter(i => i.productId.toString() !== productId);
+        await cart.save();
 
-    res.json(cart);
+        res.json(cart);
+    } catch (error) {
+        console.error("error while remove item", error);
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+
 }
 
 const getCartItems = async (req, res) => {
@@ -24,7 +30,7 @@ const getCartItems = async (req, res) => {
     }
 
     try {
-        const cart = await Cart.findOne({ user: id })
+        const cart = await Cart.findOne({ user: id, placed: false, isDeleted: false })
             .populate({
                 path: 'items.productId',
                 select: '_id type title duration price image category',
@@ -64,7 +70,7 @@ const addItems = async (req, res) => {
     try {
         let cart = await Cart.findOne({ user: userId });
         if (!cart) {
-            cart = new Cart({ user: userId, items: [{ productId, quantity: 1 }] });
+            cart = new Cart({ user: userId, placed: false, items: [{ productId, quantity: 1 }] });
         } else {
             const exists = cart.items.some(item => item.productId.toString() === productId);
             if (exists) {
@@ -77,9 +83,28 @@ const addItems = async (req, res) => {
         await cart.save();
         res.json({ success: true, cart });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ success: false, message: "Server Error" });
     }
 }
+
+const clearCart = async (req, res) => {
+    try {
+        const Cart = mongoose.model('Cart')
+        const { userId } = req.body;
+        await Cart.findOneAndUpdate({ user: userId }, {
+            $set: {
+                isDeleted: true
+            }
+        })
+    } catch (error) {
+        console.error("error while clear the cart", error);
+        res.status(500).json({ success: false, message: "Server Error" });
+
+    }
+}
+
+
+cartController.clearCart = clearCart
 cartController.addItems = addItems
 cartController.removeItem = removeItem
 cartController.getCartItems = getCartItems

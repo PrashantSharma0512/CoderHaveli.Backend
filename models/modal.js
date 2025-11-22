@@ -446,6 +446,8 @@ module.exports = (mongoose) => ({
                     quantity: { type: Number, default: 1 },
                 }
             ],
+            isDeleted: { type: Boolean, default: false },
+            placed: { type: Boolean, default: false },
             updatedAt: { type: Date, default: Date.now },
         })
     ),

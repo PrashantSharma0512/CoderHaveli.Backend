@@ -5,6 +5,6 @@ const Authenticate = require('../middlewares/Auth')
 router.post('/remove', Authenticate, cartController.removeItem);
 router.get('/', Authenticate, cartController.getCartItems);
 router.post('/add', Authenticate, cartController.addItems);
-// router.get('/user-cart')
+router.get('/clear',Authenticate,cartController.clearCart)
 
 module.exports = router
