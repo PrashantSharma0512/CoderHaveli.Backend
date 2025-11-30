@@ -314,7 +314,7 @@ const login = async (req, res) => {
         }
 
         // Token expiration logic
-        const accessTokenExpiry = rememberMe ? '7d' : '15m';
+        const accessTokenExpiry = rememberMe ? '10m' : '3m';
         const refreshTokenExpiry = rememberMe ? '30d' : '7d';
         const refreshTokenMaxAge = rememberMe
             ? 30 * 24 * 60 * 60 * 1000 // 30 days

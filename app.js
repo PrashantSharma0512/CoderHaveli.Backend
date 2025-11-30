@@ -74,6 +74,7 @@ app.use('/api', require('./routes/index'));
 app.use('/api', require('./routes/problem'));
 app.use('/api/cart', require('./routes/cart'))
 app.use('/api/payment', require('./routes/payment'))
+app.use('/admin', require('./routes/admin'))
 
 // Start server
 const PORT = process.env.PORT || 3000;
