@@ -452,8 +452,6 @@ module.exports = (mongoose) => ({
         })
     ),
 
-
-
     email: { type: String, required: true, unique: true, index: true },
 
     difficulty: { type: String, required: true, enum: ['easy', 'medium', 'hard'], index: true },
