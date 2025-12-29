@@ -103,9 +103,22 @@ const clearCart = async (req, res) => {
     }
 }
 
+const getUserCartCount =async (req,res) => {
+    try {
+        const Cart = mongoose.model('Cart')
+        const { id } = req.query;
+        const cart = await Cart.findOne({ user: id, placed: false, isDeleted: false });
+        const count = cart ? cart.items.length : 0;
+        res.json({ success: true, count });
+    } catch (error) {
+        console.error("error while getting user cart count", error);
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+}
 
 cartController.clearCart = clearCart
 cartController.addItems = addItems
 cartController.removeItem = removeItem
 cartController.getCartItems = getCartItems
+cartController.getUserCartCount = getUserCartCount
 module.exports = cartController

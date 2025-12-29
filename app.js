@@ -8,13 +8,6 @@ const morgan = require('morgan');
 const app = express();
 const connectRedis = require("./utils/redis");
 
-// (async () => {
-//   const redis = await connectRedis();
-//   await redis.set("foo", "bar", {
-//     EX: 10
-//   });
-//   console.log(await redis.get("foo"));
-// })();
 
 
 const allowedOrigin = [
