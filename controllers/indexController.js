@@ -363,24 +363,24 @@ const getProblemData = async (req, res) => {
             {
                 $lookup: {
                     from: 'codes',
-                    localField: 'quesID',
-                    foreignField: 'quesID',
+                    localField: 'quesId',
+                    foreignField: 'quesId',
                     as: 'codeData'
                 }
             },
             {
                 $lookup: {
-                    from: 'problemexamples', // collection names are lowercase and plural by default
-                    localField: 'quesID',
-                    foreignField: 'quesID',
+                    from: 'problemexamples', 
+                    localField: 'quesId',
+                    foreignField: 'quesId',
                     as: 'exampleData'
                 }
             },
             {
                 $lookup: {
-                    from: 'constraints', // corrected typo and collection name
-                    localField: 'quesID',
-                    foreignField: 'quesID',
+                    from: 'constraints', 
+                    localField: 'quesId',
+                    foreignField: 'quesId',
                     as: 'constraintsData'
                 }
             },
@@ -398,7 +398,7 @@ const getProblemData = async (req, res) => {
             },
             {
                 $project: {
-                    quesID: 1,
+                    quesId: 1,
                     quesName: 1,
                     quesDesc: 1,
                     difficulty: 1,

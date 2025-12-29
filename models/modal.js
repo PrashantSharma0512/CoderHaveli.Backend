@@ -90,6 +90,8 @@ module.exports = (mongoose) => ({
             name: { type: String, required: true },
             imageType: { type: String, required: true },
             uploadedAt: { type: Date, default: Date.now },
+        }, {
+            timestamp: true
         })
     ),
     Course: mongoose.model(
@@ -139,6 +141,8 @@ module.exports = (mongoose) => ({
         'Category',
         new mongoose.Schema({
             name: { type: String, required: true }
+        }, {
+            timestamp: true
         })
     ),
     Code: mongoose.model(
@@ -161,6 +165,8 @@ module.exports = (mongoose) => ({
             explaination: { type: String, default: '' },
             timeLimit: { type: Number, default: 1000 },
             memoryLimit: { type: Number, default: 256 },
+        }, {
+            timestamp: true
         })
     ),
     ProblemList: mongoose.model(
@@ -170,26 +176,29 @@ module.exports = (mongoose) => ({
             quesName: { type: String, required: true },
             quesDesc: { type: String, required: true },
             difficulty: { type: String, required: true, enum: ['Easy', 'Medium', 'Hard'] },
-            problemExample: { type: mongoose.Schema.Types.ObjectId, ref: 'ProblemExample' },
-            code: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Code' }],
             contraints: { type: mongoose.Schema.Types.ObjectId, ref: 'Contraints' },
             tags: [{ type: String, default: null }],
             createdAt: { type: Date, default: Date.now },
             modifiedAt: { type: Date, default: Date.now }
         })
     ),
+    
     Constraints: mongoose.model(
         'Constraints',
         new mongoose.Schema({
             quesId: { type: String, required: true },
-            contraints: { type: [String], required: true }
+            constraint: { type: [String], required: true },
+            createdAt: { type: Date, default: Date.now },
+            modifiedAt: { type: Date, default: Date.now }
         })
     ),
     hint: mongoose.model(
         'Hint',
         new mongoose.Schema({
             quesId: { type: String, required: true },
-            hints: [{ type: String, required: true }]
+            hints: [{ type: String, required: true }],
+            createdAt: { type: Date, default: Date.now },
+            modifiedAt: { type: Date, default: Date.now }
         })
     ),
     Submissions: mongoose.model(
@@ -390,6 +399,8 @@ module.exports = (mongoose) => ({
             // Optional tracking
             coupon: { type: mongoose.Schema.Types.ObjectId, ref: "Coupon" },
             autoRenew: { type: Boolean, default: false }, // useful if you want auto-renewable plans
+        }, {
+            timestamp: true
         })
     ),
     Coupon: mongoose.model(
@@ -434,7 +445,11 @@ module.exports = (mongoose) => ({
             perUserLimit: { type: Number, default: 1 },
 
             isActive: { type: Boolean, default: true }
-        })
+        },
+            {
+                timestamp: true
+            }
+        )
     ),
     cartSchema: mongoose.model(
         'Cart',
@@ -449,7 +464,10 @@ module.exports = (mongoose) => ({
             isDeleted: { type: Boolean, default: false },
             placed: { type: Boolean, default: false },
             updatedAt: { type: Date, default: Date.now },
-        })
+        },
+            {
+                timestamp: true
+            })
     ),
 
     email: { type: String, required: true, unique: true, index: true },
