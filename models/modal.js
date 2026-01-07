@@ -176,7 +176,7 @@ module.exports = (mongoose) => ({
             quesName: { type: String, required: true },
             quesDesc: { type: String, required: true },
             difficulty: { type: String, required: true, enum: ['Easy', 'Medium', 'Hard'] },
-            contraints: { type: mongoose.Schema.Types.ObjectId, ref: 'Contraints' },
+            Constraints: { type: mongoose.Schema.Types.ObjectId, ref: 'Constraints' },
             tags: [{ type: String, default: null }],
             createdAt: { type: Date, default: Date.now },
             modifiedAt: { type: Date, default: Date.now }

@@ -24,5 +24,6 @@ router.post('/problem/like', Authenicated, Problem.addLike)
 router.post('/problem/run', Problem.run)
 router.post('/problem/submit', Problem.submit)
 
-
+// routes for admin panel
+router.post('/problem/add-question', Problem.addQuestion);
 module.exports = router;

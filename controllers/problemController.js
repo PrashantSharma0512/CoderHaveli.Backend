@@ -542,6 +542,104 @@ const addLike = async (req, res) => {
     }
 };
 
+// admin
+
+const addQuestion = async (req, res) => {
+    try {
+        const { question } = req.body;
+        const { quesId, quesName, quesDesc, languages, hints, testcases, difficulty, tags, code, constraints } = question;
+        if (!quesId || !quesName || !quesDesc || !languages || !hints || !testcases || !difficulty || !tags || !code || !constraints) {
+            return res.status(400).json({ success: false, error: "Missing required fields" });
+        }
+        const ProblemList = mongoose.model('ProblemList');
+        const TestCase = mongoose.model('TestCase');
+        const Hint = mongoose.model('Hint');
+        const StarterCode = mongoose.model('StarterCode');
+        const Constraints = mongoose.model('Constraints');
+
+        const constraintResult = await Constraints.findOneAndUpdate(
+            { quesId: quesId },
+            {
+                $set: {
+                    quesId: quesId,
+                    constraints: constraints,
+                    createdAt: new Date(),
+                }
+            },
+            {
+                upsert: true, new: true
+            }
+        )
+        await ProblemList.findOneAndUpdate(
+            {
+                quesId: quesId
+            },
+            {
+                $set: {
+                    quesId: quesId,
+                    quesName: quesName,
+                    quesDesc: quesDesc,
+                    languages: languages,
+                    difficulty: difficulty,
+                    constraints: constraintResult._id,
+                    tags: tags,
+                    createdAt: new Date(),
+                }
+            },
+            {
+                upsert: true, new: true
+            }
+        );
+
+        await Hint.findOneAndUpdate(
+            { quesId: quesId },
+            {
+                $set: {
+                    quesId: quesId,
+                    hints: hints,
+                    createdAt: new Date(),
+                }
+            },
+            {
+                upsert: true, new: true
+            }
+        );
+        testcases.map(async testcase => {
+            await TestCase.findOneAndUpdate(
+                { quesId: quesId },
+                {
+                    $set: {
+                        quesId: quesId,
+                        input: testcase.input,
+                        output: testcase.output,
+                        explaination: testcase.explaination,
+                        memoryLimit: testcase.memoryLimit,
+                        timeLimit: testcase.timeLimit
+                    }
+                }
+            )
+        })
+        for (const [language, starterCode] of Object.entries(code)) {
+            await StarterCode.findOneAndUpdate(
+                { quesId: quesId, language: language },
+                {
+                    $set: {
+                        quesId: quesId,
+                        language: language,
+                        code: starterCode
+                    }
+                },
+                { upsert: true, new: true }
+            );
+        }
+
+        res.status(201).json({ success: true, message: "Question added successfully" });
+    } catch (error) {
+        console.error("error while adding question", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+}
+
 
 problemController.getAllProblems = getAllProblems;
 problemController.fetchComment = fetchComment
@@ -555,5 +653,6 @@ problemController.getSubmission = getSubmission;
 problemController.getStarterCode = getStarterCode;
 problemController.getProblemById = getProblemById;
 problemController.addLike = addLike;
+problemController.addQuestion = addQuestion;
 
 module.exports = problemController;
