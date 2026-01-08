@@ -107,7 +107,7 @@ const getUserCartCount =async (req,res) => {
     try {
         const Cart = mongoose.model('Cart')
         const { id } = req.query;
-        const cart = await Cart.findOne({ user: id, placed: false, isDeleted: false });
+        const cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(id), placed: false, isDeleted: false });
         const count = cart ? cart.items.length : 0;
         res.json({ success: true, count });
     } catch (error) {
