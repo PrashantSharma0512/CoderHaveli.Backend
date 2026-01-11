@@ -103,10 +103,17 @@ const clearCart = async (req, res) => {
     }
 }
 
-const getUserCartCount =async (req,res) => {
+const getUserCartCount = async (req, res) => {
     try {
         const Cart = mongoose.model('Cart')
         const { id } = req.query;
+        
+        if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Valid user id is required"
+            });
+        }
         const cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(id), placed: false, isDeleted: false });
         const count = cart ? cart.items.length : 0;
         res.json({ success: true, count });

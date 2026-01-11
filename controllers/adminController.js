@@ -253,5 +253,164 @@ adminController.AllUsers = async (req, res) => {
     }
 };
 
+adminController.saveApproach = async (req, res) => {
+    try {
+        const Approaches = mongoose.model('Approaches');
+        const ApproachesData = req.body;
 
+        const newApproach = await Approaches.findOneAndUpdate(
+            {
+                quesId: ApproachesData.quesId,
+                approachType: ApproachesData.approachType
+            },
+            { $set: ApproachesData },
+            { upsert: true, new: true }
+        );
+        res.status(200).json({
+            success: true,
+            data: newApproach
+        });
+    } catch (error) {
+        console.error("Error while saving approach", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+            error: error.message
+        });
+    }
+}
+adminController.Approaches = async (req, res) => {
+    try {
+        const Approaches = mongoose.model('Approaches');
+        const approaches = await Approaches.aggregate([
+            {
+                $addFields: {
+                    quesIdNum: {
+                        $convert: {
+                            input: "$quesId",
+                            to: "int",
+                            onError: 0,
+                            onNull: 0
+                        }
+                    }
+                }
+            },
+            {
+                $sort: { quesIdNum: 1 }
+            },
+            {
+                $addFields: {
+                    langAvailable: {
+                        $map: {
+                            input: { $objectToArray: "$code" },
+                            as: "lang",
+                            in: "$$lang.k"
+                        }
+                    }
+                }
+            },
+            {
+                $project: {
+                    quesId: 1,
+                    approachType: 1,
+                    approachDesc: 1,
+                    langAvailable: 1,
+                    time_complexity: 1,
+                    space_complexity: 1,
+                    code: 1,
+                    videoUrl: 1,
+                    createdAt: 1,
+                    modifiedAt: 1
+                }
+            }
+        ]);
+
+        res.status(200).json({
+            success: true,
+            data: approaches
+        });
+    } catch (error) {
+        console.error("Error while saving approach", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+            error: error.message
+        });
+    }
+}
+adminController.getApproach = async (req, res) => {
+    try {
+        const Approaches = mongoose.model('Approaches');
+        const { id } = req.query;
+        const approach = await Approaches.findById(id);
+        res.status(200).json({
+            success: true,
+            data: approach
+        });
+    } catch (error) {
+        console.error("Error while fetching approach", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+            error: error.message
+        });
+    }
+}
+adminController.saveApproach = async (req, res) => {
+    try {
+        const Approaches = mongoose.model('Approaches');
+        const ApproachesData = req.body;
+
+        const newApproach = await Approaches.findOneAndUpdate(
+            {
+                quesId: ApproachesData.quesId,
+                approachType: ApproachesData.approachType
+            },
+            { $set: ApproachesData },
+            { upsert: true, new: true }
+        );
+        res.status(200).json({
+            success: true,
+            data: newApproach
+        });
+    } catch (error) {
+        console.error("Error while saving approach", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+            error: error.message
+        });
+    }
+}
+adminController.deleteApproach = async (req, res) => {
+    try {
+        const Approaches = mongoose.model('Approaches');
+        const { id } = req.body;
+        console.log(id);
+        
+
+        const deletedApproach = await Approaches.findOneAndDelete({
+            _id: id
+        });
+
+        if (!deletedApproach) {
+            return res.status(404).json({
+                success: false,
+                message: "Approach not found"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Approach deleted successfully"
+        });
+    } catch (error) {
+        console.error("Error while deleting approach", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+            error: error.message
+        });
+    }
+}
 module.exports = adminController;

@@ -103,6 +103,7 @@ const getEditorialById = async (req, res) => {
             { quesId: quesIndex.quesId },
             {
                 approachDesc: 1,
+                approachName: 1,
                 approachType: 1,
                 code: 1,
                 time_complexity: 1,
