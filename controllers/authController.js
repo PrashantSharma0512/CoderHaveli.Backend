@@ -37,7 +37,6 @@ const register = async (req, res) => {
             if (existingUser.isVerified) {
                 return res.status(400).json({ message: 'Email already registered' });
             }
-            console.log("User already exists but not verified", existingUser);
 
             if (existingUser.otpExpiry && existingUser.otpExpiry < new Date()) {
                 await User.deleteOne({ _id: existingUser._id });

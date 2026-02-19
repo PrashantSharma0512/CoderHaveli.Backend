@@ -91,11 +91,21 @@ const clearCart = async (req, res) => {
     try {
         const Cart = mongoose.model('Cart')
         const { userId } = req.body;
-        await Cart.findOneAndUpdate({ user: userId }, {
-            $set: {
-                isDeleted: true
+        const cart_data = await Cart.findOneAndUpdate(
+            { user: userId },
+            {
+                $set: {
+                    isDeleted: true
+                }
+            },
+            {
+                new: true
             }
-        })
+        );
+        if (!cart_data) {
+            return res.status(404).json({ success: false, message: "Cart not found" });
+        }
+        return res.status(200).json({ success: true, message: "Cart cleared successfully" });
     } catch (error) {
         console.error("error while clear the cart", error);
         res.status(500).json({ success: false, message: "Server Error" });
@@ -107,7 +117,7 @@ const getUserCartCount = async (req, res) => {
     try {
         const Cart = mongoose.model('Cart')
         const { id } = req.query;
-        
+
         if (!id || !mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({
                 success: false,
