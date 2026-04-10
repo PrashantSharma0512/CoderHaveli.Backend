@@ -160,17 +160,30 @@ const getCourseData = async (req, res) => {
         const Subscription = mongoose.model("Subscription");
         const { userId } = req.query;
 
-        const client = await connectRedis();
-        // const client = 'hhh';
+        let client = null;
+        let cacheKey = userId ? `courses:user:${userId}` : "courses:all";
 
-        const cacheKey = userId ? `courses:user:${userId}` : "courses:all";
-
-        const cached = await client.get(cacheKey);
-        if (cached) {
-            console.info("Data Are Come From Redis")
-            return res.json(JSON.parse(cached));
+        // ✅ Try connecting Redis (fail silently)
+        try {
+            client = await connectRedis();
+        } catch (err) {
+            console.warn("Redis not available, skipping cache...");
         }
 
+        // ✅ Try fetching from Redis
+        if (client) {
+            try {
+                const cached = await client.get(cacheKey);
+                if (cached) {
+                    console.info("Data coming from Redis");
+                    return res.json(JSON.parse(cached));
+                }
+            } catch (err) {
+                console.warn("Redis GET failed, fallback to DB");
+            }
+        }
+
+        // 🔥 DB Logic (Always works)
         let excludeCourseIds = [];
         if (userId && mongoose.Types.ObjectId.isValid(userId)) {
             const subscriptions = await Subscription.find({
@@ -178,6 +191,7 @@ const getCourseData = async (req, res) => {
                 isDeleted: false,
                 courseType: "course",
             }).select("course");
+
             excludeCourseIds = subscriptions.map((s) => s.course);
         }
 
@@ -206,9 +220,7 @@ const getCourseData = async (req, res) => {
                     as: "instructorData",
                 },
             },
-            {
-                $unwind: { path: "$instructorData", preserveNullAndEmptyArrays: true },
-            },
+            { $unwind: { path: "$instructorData", preserveNullAndEmptyArrays: true } },
             {
                 $lookup: {
                     from: "categories",
@@ -217,9 +229,7 @@ const getCourseData = async (req, res) => {
                     as: "categoryData",
                 },
             },
-            {
-                $unwind: { path: "$categoryData", preserveNullAndEmptyArrays: true },
-            },
+            { $unwind: { path: "$categoryData", preserveNullAndEmptyArrays: true } },
             {
                 $match: { "imageData.imageType": "course" },
             },
@@ -237,10 +247,17 @@ const getCourseData = async (req, res) => {
             },
         ]);
 
+        // ✅ Try saving to Redis (fail silently)
+        if (client) {
+            try {
+                await client.set(cacheKey, JSON.stringify(courseData), { EX: 6000 });
+            } catch (err) {
+                console.warn("Redis SET failed");
+            }
+        }
 
-        await client.set(cacheKey, JSON.stringify(courseData), { EX: 6000 });
+        return res.json(courseData);
 
-        res.json(courseData);
     } catch (error) {
         console.error("Error fetching course data:", error);
         return res.status(500).json({ error: "Internal Server Error" });
@@ -266,19 +283,39 @@ const getTutorialData = async (req, res) => {
         const Course = mongoose.model("Course");
         const Subscription = mongoose.model("Subscription");
 
-        const client = await connectRedis();
-
+        let client = null;
         const cacheKey = userId ? `tutorial:user:${userId}` : "tutorial:all";
 
-        const cached = await client.get(cacheKey);
-        if (cached) {
-            return res.json(JSON.parse(cached));
+        // ✅ Try Redis connection (fail silently)
+        try {
+            client = await connectRedis();
+        } catch (err) {
+            console.warn("Redis not available, skipping cache...");
         }
 
+        // ✅ Try Redis GET
+        if (client) {
+            try {
+                const cached = await client.get(cacheKey);
+                if (cached) {
+                    console.info("Tutorial data from Redis");
+                    return res.json(JSON.parse(cached));
+                }
+            } catch (err) {
+                console.warn("Redis GET failed, fallback to DB");
+            }
+        }
+
+        // 🔥 DB Logic
         let excludeCourseIds = [];
 
         if (userId && mongoose.Types.ObjectId.isValid(userId)) {
-            const subscriptions = await Subscription.find({ user: userId, isDeleted: false, courseType: "tutorial" }).select("course");
+            const subscriptions = await Subscription.find({
+                user: userId,
+                isDeleted: false,
+                courseType: "tutorial"
+            }).select("course");
+
             excludeCourseIds = subscriptions.map((s) => s.course);
         }
 
@@ -298,12 +335,8 @@ const getTutorialData = async (req, res) => {
                     as: "imageData",
                 },
             },
-            {
-                $unwind: { path: "$imageData", preserveNullAndEmptyArrays: true },
-            },
-            {
-                $match: { "imageData.imageType": "tutorial" },
-            },
+            { $unwind: { path: "$imageData", preserveNullAndEmptyArrays: true } },
+            { $match: { "imageData.imageType": "tutorial" } },
             {
                 $lookup: {
                     from: "instructors",
@@ -312,9 +345,7 @@ const getTutorialData = async (req, res) => {
                     as: "instructorData",
                 },
             },
-            {
-                $unwind: { path: "$instructorData", preserveNullAndEmptyArrays: true },
-            },
+            { $unwind: { path: "$instructorData", preserveNullAndEmptyArrays: true } },
             {
                 $lookup: {
                     from: "categories",
@@ -323,25 +354,36 @@ const getTutorialData = async (req, res) => {
                     as: "categoryData",
                 },
             },
-            {
-                $unwind: { path: "$categoryData", preserveNullAndEmptyArrays: true },
-            },
+            { $unwind: { path: "$categoryData", preserveNullAndEmptyArrays: true } },
             {
                 $project: {
                     title: 1,
                     description: 1,
                     price: 1,
                     duration: 1,
-                    image: { url: "$imageData.url", imageId: "$imageData.imageId" },
+                    image: {
+                        url: "$imageData.url",
+                        imageId: "$imageData.imageId"
+                    },
                     instructor: { name: "$instructorData.name" },
                     category: { name: "$categoryData.name" },
                 },
             },
         ]);
-        await client.set(cacheKey, JSON.stringify(tutorialData), { EX: 6000 });
-        res.json(tutorialData);
+
+        // ✅ Try Redis SET (fail silently)
+        if (client) {
+            try {
+                await client.set(cacheKey, JSON.stringify(tutorialData), { EX: 6000 });
+            } catch (err) {
+                console.warn("Redis SET failed");
+            }
+        }
+
+        return res.json(tutorialData);
+
     } catch (error) {
-        console.error("Error fetching card data:", error);
+        console.error("Error fetching tutorial data:", error);
         return res.status(500).json({ error: error.message });
     }
 };
@@ -349,16 +391,31 @@ const getTutorialData = async (req, res) => {
 const getProblemData = async (req, res) => {
     try {
         const ProblemList = mongoose.model('ProblemList');
-        const client = await connectRedis();
 
+        let client = null;
         const cacheKey = 'problem-data';
 
-        const cached = await client.get(cacheKey);
-        if (cached) {
-            console.info("Data Are Come From Redis")
-            return res.json(JSON.parse(cached));
+        // ✅ Try Redis connection
+        try {
+            client = await connectRedis();
+        } catch (err) {
+            console.warn("Redis not available, skipping cache...");
         }
 
+        // ✅ Try Redis GET
+        if (client) {
+            try {
+                const cached = await client.get(cacheKey);
+                if (cached) {
+                    console.info("Data coming from Redis");
+                    return res.json(JSON.parse(cached));
+                }
+            } catch (err) {
+                console.warn("Redis GET failed, fallback to DB");
+            }
+        }
+
+        // 🔥 DB Query (source of truth)
         const problemData = await ProblemList.aggregate([
             {
                 $lookup: {
@@ -370,7 +427,7 @@ const getProblemData = async (req, res) => {
             },
             {
                 $lookup: {
-                    from: 'problemexamples', 
+                    from: 'problemexamples',
                     localField: 'quesId',
                     foreignField: 'quesId',
                     as: 'exampleData'
@@ -378,7 +435,7 @@ const getProblemData = async (req, res) => {
             },
             {
                 $lookup: {
-                    from: 'constraints', 
+                    from: 'constraints',
                     localField: 'quesId',
                     foreignField: 'quesId',
                     as: 'constraintsData'
@@ -407,17 +464,27 @@ const getProblemData = async (req, res) => {
                     exampleInput: '$exampleData.input',
                     exampleOutput: '$exampleData.output',
                     exampleExplanation: '$exampleData.explaination',
-                    constraints: '$constraintsData.contraints', // keeping the model's field spelling
+                    constraints: '$constraintsData.contraints',
                     createdAt: 1,
                     modifiedAt: 1
                 }
             }
         ]);
-        await client.set(cacheKey, JSON.stringify(problemData), { EX: 600 });
-        res.json(problemData);
+
+        // ✅ Try Redis SET
+        if (client) {
+            try {
+                await client.set(cacheKey, JSON.stringify(problemData), { EX: 600 });
+            } catch (err) {
+                console.warn("Redis SET failed");
+            }
+        }
+
+        return res.json(problemData);
+
     } catch (error) {
         console.error('Error fetching problem data:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
+        return res.status(500).json({ error: 'Internal Server Error' });
     }
 };
 
