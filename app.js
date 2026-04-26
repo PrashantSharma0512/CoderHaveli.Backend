@@ -31,9 +31,6 @@ app.options('*', cors({
 }));
 
 
-
-
-
 // Connect to MongoDB
 mongoConnect(process.env.MONGO_URI)
   .then(() => console.log('Connected to MongoDB'))
@@ -73,6 +70,7 @@ app.use('/api', require('./routes/problem'));
 app.use('/api/cart', require('./routes/cart'))
 app.use('/api/payment', require('./routes/payment'))
 app.use('/admin', require('./routes/admin'))
+app.use('/analytics', require('./routes/analytics'))
 
 
 // Start server
