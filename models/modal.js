@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+// const mongoose = require('mongoose');
 // const bcrypt = require('bcryptjs');
 
 module.exports = (mongoose) => ({
@@ -124,7 +124,12 @@ module.exports = (mongoose) => ({
             createdAt: { type: Date, default: Date.now },
             modifiedAt: { type: Date, default: Date.now },
             isDeleted: { type: Boolean, default: false }
-        })
+        }).index(
+            { category: 1 },
+            {
+                partialFilterExpression: { isDeleted: false }
+            }
+        )
     ),
     Instructor: mongoose.model(
         'Instructor',
@@ -182,7 +187,7 @@ module.exports = (mongoose) => ({
             modifiedAt: { type: Date, default: Date.now }
         })
     ),
-    
+
     Constraints: mongoose.model(
         'Constraints',
         new mongoose.Schema({
@@ -469,6 +474,39 @@ module.exports = (mongoose) => ({
                 timestamp: true
             })
     ),
+    // analytics schema
+    analyticsSchema: mongoose.model(
+        'Analytics',
+        new mongoose.Schema({
+            userId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "User",
+                default: null
+            },
+            eventType: {
+                type: String,
+                required: true,
+                index: true
+            },
+            metadata: {
+                type: mongoose.Schema.Types.Mixed,
+                default: {}
+            },
+            path: String,
+            method: String,
+            ip: String,
+            userAgent: String
+        }, { timestamps: true }).index(
+            { createdAt: 1 },
+            { expireAfterSeconds: 60 * 60 * 24 * 30 }
+        ),
+    ),
+
+    // TTL → auto delete after 30 days
+    // analyticsSchema.index(
+    //     { createdAt: 1 },
+    //     { expireAfterSeconds: 60 * 60 * 24 * 30 }
+    // );
 
     email: { type: String, required: true, unique: true, index: true },
 

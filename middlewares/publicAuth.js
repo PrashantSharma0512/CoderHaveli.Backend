@@ -1,12 +1,13 @@
 const jwt = require('jsonwebtoken');
 
-const Authenicated = (req, res, next) => {
+const publicAuth = (req, res, next) => {
     try {
         const authHeader = req.headers['authorization'];
         const token = authHeader?.split(' ')[1];
 
         if (!token) {
-            return res.status(401).json({ message: 'Access token missing' });
+            req.user = null;
+            return next();
         }
 
         const decoded = jwt.verify(token, process.env.ACCESS_SECRET);
@@ -18,8 +19,9 @@ const Authenicated = (req, res, next) => {
 
         next();
     } catch (err) {
-        return res.status(403).json({ message: 'Invalid or expired token' });
+        // Invalid token → treat as guest
+        req.user = null;
+        next();
     }
-};
-
-module.exports = Authenicated;
+}
+module.exports = publicAuth;

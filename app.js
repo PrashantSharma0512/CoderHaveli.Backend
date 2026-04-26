@@ -7,7 +7,7 @@ const mongoConnect = require('./connection');
 const morgan = require('morgan');
 const app = express();
 const connectRedis = require("./utils/redis");
-
+const analyticsMiddleware = require("./middlewares/Analytics");
 
 
 const allowedOrigin = [
@@ -29,12 +29,17 @@ app.options('*', cors({
   origin: allowedOrigin,
   credentials: true
 }));
+
+
+
+
+
 // Connect to MongoDB
 mongoConnect(process.env.MONGO_URI)
   .then(() => console.log('Connected to MongoDB'))
   .catch((err) => console.error('Error connecting to MongoDB:', err));
 
-// Load models
+// // Load models
 require('./models/modal')(mongoose);
 
 // Color-coded status based on response code
@@ -68,6 +73,7 @@ app.use('/api', require('./routes/problem'));
 app.use('/api/cart', require('./routes/cart'))
 app.use('/api/payment', require('./routes/payment'))
 app.use('/admin', require('./routes/admin'))
+
 
 // Start server
 const PORT = process.env.PORT || 3000;
