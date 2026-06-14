@@ -6,8 +6,6 @@ const cookieParser = require('cookie-parser');
 const mongoConnect = require('./connection');
 const morgan = require('morgan');
 const app = express();
-const connectRedis = require("./utils/redis");
-const analyticsMiddleware = require("./middlewares/Analytics");
 
 
 const allowedOrigin = [
@@ -72,6 +70,15 @@ app.use('/api/payment', require('./routes/payment'))
 app.use('/admin', require('./routes/admin'))
 app.use('/analytics', require('./routes/analytics'))
 
+const flushAnalytics = require("./utils/analyticsFlusher");
+
+const FLUSH_INTERVAL = 60000;
+
+setInterval(() => {
+
+  flushAnalytics();
+
+}, FLUSH_INTERVAL);
 
 // Start server
 const PORT = process.env.PORT || 3000;

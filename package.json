@@ -4,7 +4,7 @@
   "description": "backend for the compiler project",
   "main": "app.js",
   "scripts": {
-    "dev": "concurrently -n API,WORKER -c green,blue \"nodemon app.js\" \"nodemon worker/Analytics.js\"",
+    "dev": "nodemon app.js",
     "start": "node app.js",
     "worker": "node worker/Analytics.js",
     "debug": "nodemon --inspect app.js"

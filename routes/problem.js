@@ -23,7 +23,7 @@ router.post('/problem/like', Authenicated, AnalyticsMiddleware, Problem.addLike)
 
 
 //routes for compiler
-router.post('/problem/run', Authenicated, AnalyticsMiddleware, Problem.run)
+router.post('/problem/run', Authenicated, Problem.run)
 router.post('/problem/submit', Authenicated, AnalyticsMiddleware, Problem.submit)
 
 // routes for admin panel
