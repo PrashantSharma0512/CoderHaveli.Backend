@@ -41,7 +41,7 @@ log.success("RSS fetch cron registered 6: 00 AM");
 
 // ── Daily Newsletter: 8:00 AM IST (2:30 AM UTC) ─────────
 
-cron.schedule("56 12 * * *", async () => { 
+cron.schedule("0 8 * * *", async () => { 
 
     log.info("Daily newsletter generation starting...");
 
