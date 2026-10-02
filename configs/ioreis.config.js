@@ -1,22 +1,38 @@
 require("dotenv").config();
+
 const IORedis = require("ioredis");
 
-let upstashUrl = process.env.UPSTASH_URL || "";
-if (upstashUrl.includes("upstash.io") && upstashUrl.startsWith("redis://")) {
-    upstashUrl = upstashUrl.replace(/^redis:\/\//, "rediss://");
+const redisUrl = process.env.LAYERBASE_REDIS_URL;
+
+if (!redisUrl) {
+    throw new Error("LAYERBASE_REDIS_URL is not defined");
 }
 
-const connection = new IORedis(upstashUrl, {
+const parsedUrl = new URL(redisUrl);
+
+const connection = new IORedis(redisUrl, {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
+
+    tls: {
+        servername: parsedUrl.hostname,
+    },
 });
 
 connection.on("connect", () => {
-    console.log("✅ BullMQ connected to Upstash");
+    console.log("✅ Connected to Layerbase Redis");
+});
+
+connection.on("ready", () => {
+    console.log("✅ Layerbase Redis ready");
 });
 
 connection.on("error", (err) => {
-    console.error("❌ BullMQ Redis Error:", err);
+    console.error("❌ Layerbase Redis Error:", err.message);
+});
+
+connection.on("close", () => {
+    console.log("⚠️ Layerbase Redis connection closed");
 });
 
 module.exports = connection;

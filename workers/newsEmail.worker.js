@@ -66,7 +66,14 @@ const emailWorker = new Worker(
     },
     {
         connection,
-        concurrency: 1
+        concurrency: 1,
+        settings: {
+            lockDuration: 30000,
+            lockRenewTime: 15000,
+            stalledInterval: 5000,
+            maxStalledCount: 2,
+            retryProcessDelay: 5000
+        }
     }
 );
 

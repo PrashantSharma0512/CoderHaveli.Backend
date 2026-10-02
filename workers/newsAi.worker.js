@@ -88,7 +88,14 @@ const aiWorker = new Worker(
     },
     {
         connection,
-        concurrency: 2
+        concurrency: 2,
+        settings: {
+            lockDuration: 30000,
+            lockRenewTime: 15000,
+            stalledInterval: 5000,
+            maxStalledCount: 2,
+            retryProcessDelay: 5000
+        }
     }
 );
 

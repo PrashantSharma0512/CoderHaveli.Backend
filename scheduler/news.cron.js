@@ -21,7 +21,7 @@ const log = createLogger("cron");
 
 // ── RSS Fetch: 6:00 AM  ──────────────────────────
 
-cron.schedule("0 6 * * *", async () => {
+cron.schedule("45 14 * * *", async () => {
 
     log.info("Scheduled RSS fetch starting...");
 
@@ -40,6 +40,7 @@ cron.schedule("0 6 * * *", async () => {
 log.success("RSS fetch cron registered 6: 00 AM");
 
 // ── Daily Newsletter: 8:00 AM IST (2:30 AM UTC) ─────────
+
 
 cron.schedule("0 8 * * *", async () => { 
 

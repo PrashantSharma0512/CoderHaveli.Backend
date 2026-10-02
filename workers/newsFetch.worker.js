@@ -111,7 +111,14 @@ const fetchWorker = new Worker(
     },
     {
         connection,
-        concurrency: 3
+        concurrency: 3,
+        settings: {
+            lockDuration: 30000,
+            lockRenewTime: 15000,
+            stalledInterval: 5000,
+            maxStalledCount: 2,
+            retryProcessDelay: 5000
+        }
     }
 );
 
