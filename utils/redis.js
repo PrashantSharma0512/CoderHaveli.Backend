@@ -1,21 +1,56 @@
 const { createClient } = require("redis");
 
+const REDIS_HOST = process.env.REDIS_HOST;
+const REDIS_PORT = Number(process.env.REDIS_PORT) || 6379;
+
 const client = createClient({
-  username: "default",
-  password: process.env.REDIS_PASS,
-  socket: {
-    host: process.env.REDIS_HOST,
-    port: process.env.REDIS_PORT || 6379,
-  },
+    username: "default",
+    password: process.env.REDIS_PASS,
+
+    socket: {
+        host: REDIS_HOST,
+        port: REDIS_PORT,
+
+        // Layerbase requires TLS
+        tls: true,
+
+        // IMPORTANT: Layerbase requires SNI
+        servername: REDIS_HOST,
+
+        reconnectStrategy(retries) {
+            const delay = Math.min(retries * 100, 3000);
+            console.log(`Redis reconnecting in ${delay}ms...`);
+            return delay;
+        },
+    },
 });
 
-client.on("error", (err) => console.error("Redis Client Error", err));
+client.on("error", (err) => {
+    console.error("Redis Client Error:", err);
+});
+
+client.on("connect", () => {
+    console.log("Redis connecting...");
+});
+
+client.on("ready", () => {
+    console.log("Redis connected and ready");
+});
+
+client.on("reconnecting", () => {
+    console.log("Redis reconnecting...");
+});
+
+client.on("end", () => {
+    console.log("Redis connection closed");
+});
 
 async function connectRedis() {
-  if (!client.isOpen) {
-    await client.connect();
-  }
-  return client;
+    if (!client.isOpen) {
+        await client.connect();
+    }
+
+    return client;
 }
 
 module.exports = connectRedis;

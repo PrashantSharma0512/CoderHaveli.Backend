@@ -12,12 +12,21 @@ const connection = require("../configs/ioreis.config");
 
 const defaultJobOptions = {
     attempts: 3,
+
     backoff: {
         type: "exponential",
         delay: 5000
     },
-    removeOnComplete: 100,
-    removeOnFail: 50
+
+    removeOnComplete: {
+        age: 600,
+        count: 100
+    },
+
+    removeOnFail: {
+        age: 600,
+        count: 50
+    }
 };
 
 // Stage 1: Fetch RSS feeds from each source
