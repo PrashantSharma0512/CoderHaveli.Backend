@@ -13,6 +13,7 @@ const parsedUrl = new URL(redisUrl);
 const connection = new IORedis(redisUrl, {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
+    keepAlive: 10000,
 
     tls: {
         servername: parsedUrl.hostname,

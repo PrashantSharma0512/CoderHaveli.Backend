@@ -6,6 +6,7 @@ const REDIS_PORT = Number(process.env.REDIS_PORT) || 6379;
 const client = createClient({
     username: "default",
     password: process.env.REDIS_PASS,
+    pingInterval: 30000, // Periodically ping Redis to prevent idle timeout
 
     socket: {
         host: REDIS_HOST,
@@ -16,6 +17,7 @@ const client = createClient({
 
         // IMPORTANT: Layerbase requires SNI
         servername: REDIS_HOST,
+        keepAlive: 5000,
 
         reconnectStrategy(retries) {
             const delay = Math.min(retries * 100, 3000);
