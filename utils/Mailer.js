@@ -1,20 +1,61 @@
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 
-// Step 1: Create transporter
-const transporter = nodemailer.createTransport({
-  service: "Gmail",
-  auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASSWORD,
+let resendClient = null;
+
+function getResendClient() {
+  if (!resendClient) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      throw new Error("RESEND_API_KEY is missing in environment variables");
+    }
+    resendClient = new Resend(apiKey);
+  }
+  return resendClient;
+}
+
+const defaultFrom =
+  process.env.RESEND_FROM_EMAIL || "CoderHaveli <onboarding@resend.dev>";
+
+/**
+ * Helper to determine a valid from address for Resend.
+ * If a custom verified from email is defined in env, prioritize it over raw @gmail.com addresses.
+ */
+function resolveFrom(from) {
+  if (process.env.RESEND_FROM_EMAIL) {
+    return process.env.RESEND_FROM_EMAIL;
+  }
+  if (from && !from.includes("@gmail.com")) {
+    return from;
+  }
+  return defaultFrom;
+}
+
+/**
+ * Resend Transporter wrapper
+ * Provides `.sendMail({ from, to, subject, html, text })` for seamless compatibility.
+ */
+const Mailer = {
+  get resend() {
+    return getResendClient();
   },
-});
+  async sendMail({ from, to, subject, html, text }) {
+    const client = getResendClient();
+    const recipient = Array.isArray(to) ? to : [to];
 
-// transporter.verify((err, success) => {
-//   if (err) {
-//     console.error("❌ SMTP failed:", err);
-//   } else {
-//     console.log("✅ SMTP is ready");
-//   }
-// });
+    const { data, error } = await client.emails.send({
+      from: resolveFrom(from),
+      to: recipient,
+      subject,
+      html,
+      text,
+    });
 
-module.exports = transporter;
+    if (error) {
+      throw new Error(error.message || JSON.stringify(error));
+    }
+
+    return data;
+  },
+};
+
+module.exports = Mailer;
