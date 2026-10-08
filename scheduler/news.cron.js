@@ -19,9 +19,10 @@ const createLogger = require("../utils/logger");
 
 const log = createLogger("cron");
 
-// ── RSS Fetch: 6:00 AM  ──────────────────────────
 
-cron.schedule("45 14 * * *", async () => {
+// ── RSS Fetch: 8:00 AM ──────────────────────────
+
+cron.schedule("0 8 * * *", async () => {
 
     log.info("Scheduled RSS fetch starting...");
 
@@ -37,12 +38,12 @@ cron.schedule("45 14 * * *", async () => {
 
 });
 
-log.success("RSS fetch cron registered 6: 00 AM");
-
-// ── Daily Newsletter: 8:00 AM IST (2:30 AM UTC) ─────────
+log.success("RSS fetch cron registered (8:00 AM)");
 
 
-cron.schedule("0 8 * * *", async () => { 
+// ── Daily Newsletter: 8:30 AM IST ───────────────
+
+cron.schedule("30 8 * * *", async () => {
 
     log.info("Daily newsletter generation starting...");
 
@@ -64,4 +65,4 @@ cron.schedule("0 8 * * *", async () => {
 
 });
 
-log.success("Daily newsletter cron registered (8:00 AM IST)");
+log.success("Daily newsletter cron registered (8:30 AM IST)");
