@@ -29,105 +29,109 @@ const createLogger = require("../utils/logger");
 
 const log = createLogger("worker");
 
-const fetchWorker = new Worker(
-    "news-fetch",
-    async (job) => {
+function createFetchWorker() {
+    const fetchWorker = new Worker(
+        "news-fetch",
+        async (job) => {
 
-        const { name, url } = job.data;
+            const { name, url } = job.data;
 
-        log.info(`Fetching RSS: ${name} → ${url}`);
+            log.info(`Fetching RSS: ${name} → ${url}`);
 
-        const articles = await fetchRSS(url);
+            const articles = await fetchRSS(url);
 
-        if (!articles || articles.length === 0) {
-            log.warn(`No articles from ${name}`);
-            return { source: name, fetched: 0, saved: 0 };
-        }
+            if (!articles || articles.length === 0) {
+                log.warn(`No articles from ${name}`);
+                return { source: name, fetched: 0, saved: 0 };
+            }
 
-        const MAX_ARTICLES_PER_SOURCE = parseInt(process.env.MAX_ARTICLES_PER_SOURCE) || 3;
-        const targetArticles = articles.slice(0, MAX_ARTICLES_PER_SOURCE);
-        log.info(`${name}: ${articles.length} articles found, processing top ${targetArticles.length}`);
+            const MAX_ARTICLES_PER_SOURCE = parseInt(process.env.MAX_ARTICLES_PER_SOURCE) || 3;
+            const targetArticles = articles.slice(0, MAX_ARTICLES_PER_SOURCE);
+            log.info(`${name}: ${articles.length} articles found, processing top ${targetArticles.length}`);
 
-        const News = mongoose.model("News");
-        let saved = 0;
+            const News = mongoose.model("News");
+            let saved = 0;
 
-        for (const article of targetArticles) {
+            for (const article of targetArticles) {
 
-            const title = article.title || "";
-            const articleUrl = article.link || "";
+                const title = article.title || "";
+                const articleUrl = article.link || "";
 
-            if (!title || !articleUrl) continue;
+                if (!title || !articleUrl) continue;
 
-            try {
+                try {
 
-                const hash = generateHash(title);
+                    const hash = generateHash(title);
 
-                // Check if article already exists
-                const exists = await News.findOne({
-                    $or: [{ hash }, { articleUrl }]
-                });
+                    // Check if article already exists
+                    const exists = await News.findOne({
+                        $or: [{ hash }, { articleUrl }]
+                    });
 
-                if (exists) continue;
+                    if (exists) continue;
 
-                // Insert new article
-                const news = await News.create({
-                    title,
-                    source: name,
-                    articleUrl,
-                    content: article.contentSnippet || article.content || "",
-                    author: article.creator || article.author || "Unknown",
-                    publishedAt: article.pubDate
-                        ? new Date(article.pubDate)
-                        : new Date(),
-                    hash,
-                    tags: article.categories || []
-                });
+                    // Insert new article
+                    const news = await News.create({
+                        title,
+                        source: name,
+                        articleUrl,
+                        content: article.contentSnippet || article.content || "",
+                        author: article.creator || article.author || "Unknown",
+                        publishedAt: article.pubDate
+                            ? new Date(article.pubDate)
+                            : new Date(),
+                        hash,
+                        tags: article.categories || []
+                    });
 
-                // Queue for content extraction (Stage 2)
-                await processQueue.add(
-                    `process-${news._id}`,
-                    { articleId: news._id.toString() },
-                    { jobId: `process-${news._id}` }
-                );
+                    // Queue for content extraction (Stage 2)
+                    await processQueue.add(
+                        `process-${news._id}`,
+                        { articleId: news._id.toString() },
+                        { jobId: `process-${news._id}` }
+                    );
 
-                saved++;
-                log.info(`New article saved: "${title}"`);
+                    saved++;
+                    log.info(`New article saved: "${title}"`);
 
-            } catch (error) {
+                } catch (error) {
 
-                // E11000 = duplicate key — expected for concurrent fetches
-                if (error.code === 11000) continue;
+                    // E11000 = duplicate key — expected for concurrent fetches
+                    if (error.code === 11000) continue;
 
-                log.error(`Error saving "${title}":`, error.message);
+                    log.error(`Error saving "${title}":`, error.message);
+
+                }
 
             }
 
+            log.success(`${name}: ${saved} new articles saved`);
+
+            return { source: name, fetched: articles.length, saved };
+
+        },
+        {
+            connection,
+            concurrency: 3,
+            settings: {
+                lockDuration: 30000,
+                lockRenewTime: 15000,
+                stalledInterval: 5000,
+                maxStalledCount: 2,
+                retryProcessDelay: 5000
+            }
         }
+    );
 
-        log.success(`${name}: ${saved} new articles saved`);
+    fetchWorker.on("failed", (job, err) => {
+        log.error(`Fetch job failed [${job?.data?.name}]:`, err.message);
+    });
 
-        return { source: name, fetched: articles.length, saved };
+    fetchWorker.on("completed", (job, result) => {
+        log.success(`Fetch job completed: ${result?.source} (${result?.saved} new)`);
+    });
 
-    },
-    {
-        connection,
-        concurrency: 3,
-        settings: {
-            lockDuration: 30000,
-            lockRenewTime: 15000,
-            stalledInterval: 5000,
-            maxStalledCount: 2,
-            retryProcessDelay: 5000
-        }
-    }
-);
+    return fetchWorker;
+}
 
-fetchWorker.on("failed", (job, err) => {
-    log.error(`Fetch job failed [${job?.data?.name}]:`, err.message);
-});
-
-fetchWorker.on("completed", (job, result) => {
-    log.success(`Fetch job completed: ${result?.source} (${result?.saved} new)`);
-});
-
-module.exports = fetchWorker;
+module.exports = { createFetchWorker };

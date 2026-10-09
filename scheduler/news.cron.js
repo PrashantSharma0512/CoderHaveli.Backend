@@ -1,68 +1,41 @@
 /**
- * News Cron Scheduler
+ * News Cron Scheduler (On-Demand BullMQ Workers)
  * 
- * Two scheduled jobs:
+ * 1. RSS Fetch (Every day at 8:00 AM IST):
+ *    Spawns workers, fetches RSS feeds, extracts content, and closes workers.
  * 
- * 1. RSS Fetch (every 30 minutes):
- *    Dispatches all RSS sources to the fetch queue.
- *    The pipeline then flows: Fetch → Process → AI automatically.
+ * 2. Daily Newsletter (Every day at 8:30 AM IST):
+ *    Spawns workers, generates daily digest with Gemini, sends emails, and closes workers.
  * 
- * 2. Daily Newsletter (every day at 8:00 AM IST):
- *    Adds a newsletter generation job to the newsletter queue.
- *    The pipeline then flows: Newsletter → Email automatically.
+ * Workers are closed after jobs finish, allowing Layerbase Redis to sleep when idle.
  */
 
 const cron = require("node-cron");
-const { dispatchFetchJobs } = require("../services/newsfetcher.service");
-const { newsletterQueue } = require("../queues/news.queues");
+const { runNewsIngestionPipeline, runNewsletterPipeline } = require("../services/pipelineRunner.service");
 const createLogger = require("../utils/logger");
 
 const log = createLogger("cron");
 
-
-// ── RSS Fetch: 8:00 AM ──────────────────────────
-
+// ── RSS Fetch: 8:00 AM IST ──────────────────────────
 cron.schedule("0 8 * * *", async () => {
-
     log.info("Scheduled RSS fetch starting...");
-
     try {
-
-        await dispatchFetchJobs();
-
+        await runNewsIngestionPipeline();
     } catch (error) {
-
         log.error("RSS fetch cron failed:", error.message);
-
     }
-
 });
 
-log.success("RSS fetch cron registered (8:00 AM)");
-
+log.success("RSS fetch cron registered (8:00 AM IST - On Demand)");
 
 // ── Daily Newsletter: 8:30 AM IST ───────────────
-
 cron.schedule("30 8 * * *", async () => {
-
     log.info("Daily newsletter generation starting...");
-
     try {
-
-        await newsletterQueue.add(
-            `daily-newsletter-${Date.now()}`,
-            { date: new Date().toISOString() },
-            { jobId: `daily-newsletter-${Date.now()}` }
-        );
-
-        log.success("Newsletter generation job queued");
-
+        await runNewsletterPipeline({ date: new Date().toISOString() });
     } catch (error) {
-
         log.error("Newsletter cron failed:", error.message);
-
     }
-
 });
 
-log.success("Daily newsletter cron registered (8:30 AM IST)");
+log.success("Daily newsletter cron registered (8:30 AM IST - On Demand)");

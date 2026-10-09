@@ -227,15 +227,15 @@ async function triggerGenerate(req, res) {
 
     try {
 
-        await newsletterQueue.add(
-            `manual-newsletter-${Date.now()}`,
-            { date: new Date().toISOString() },
-            { jobId: `manual-newsletter-${Date.now()}` }
-        );
+        // Trigger on-demand pipeline asynchronously
+        const { runNewsletterPipeline } = require("../services/pipelineRunner.service");
+        runNewsletterPipeline({ date: new Date().toISOString() }).catch(err => {
+            log.error("Manual pipeline run error:", err.message);
+        });
 
         res.json({
             success: true,
-            message: "Newsletter generation queued"
+            message: "Newsletter generation started (On-Demand Worker)"
         });
 
     } catch (error) {

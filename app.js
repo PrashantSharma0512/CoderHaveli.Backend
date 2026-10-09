@@ -139,16 +139,12 @@ setInterval(async () => {
 }, FLUSH_INTERVAL);
 
 /* ==========================================================
-    News Pipeline Workers
+    News Pipeline Workers (On-Demand)
 ========================================================== */
 
-require("./workers/newsFetch.worker");
-require("./workers/newsProcess.worker");
-require("./workers/newsAi.worker");
-require("./workers/newsletter.worker");
-require("./workers/newsEmail.worker");
-
-console.log("✅ All news pipeline workers initialized");
+// Workers are spawned on-demand by scheduler/news.cron.js or manual triggers
+// to allow Layerbase/Upstash Redis to enter sleep mode when idle.
+console.log("✅ News pipeline configured (On-Demand BullMQ Workers)");
 
 /* =========================================================
     News Cron Jobs

@@ -26,81 +26,85 @@ const createLogger = require("../utils/logger");
 
 const log = createLogger("ai");
 
-const aiWorker = new Worker(
-    "news-ai",
-    async (job) => {
+function createAiWorker() {
+    const aiWorker = new Worker(
+        "news-ai",
+        async (job) => {
 
-        const { articleId } = job.data;
+            const { articleId } = job.data;
 
-        const News = mongoose.model("News");
+            const News = mongoose.model("News");
 
-        const article = await News.findById(articleId);
+            const article = await News.findById(articleId);
 
-        if (!article) {
-            log.warn(`Article not found: ${articleId}`);
-            return { articleId, status: "not_found" };
-        }
-
-        if (article.processed) {
-            log.info(`Already processed: "${article.title}"`);
-            return { articleId, status: "already_processed" };
-        }
-
-        log.info(`AI analyzing: "${article.title}"`);
-
-        // Get recent processed article titles for duplicate detection
-        const recentArticles = await News.find({
-            processed: true,
-            _id: { $ne: article._id },
-            createdAt: { $gte: new Date(Date.now() - 48 * 60 * 60 * 1000) }
-        })
-            .select("title")
-            .lean();
-
-        const existingTitles = recentArticles.map(a => a.title);
-
-        const content = article.content || article.title;
-
-        const result = await analyzeArticle(article.title, content, existingTitles);
-
-        // Update the article with AI results
-        await News.findByIdAndUpdate(articleId, {
-            $set: {
-                summary: result.summary,
-                category: result.category,
-                tags: result.tags,
-                importanceScore: result.importanceScore,
-                duplicate: result.isDuplicate,
-                processed: true
+            if (!article) {
+                log.warn(`Article not found: ${articleId}`);
+                return { articleId, status: "not_found" };
             }
-        });
 
-        log.success(`AI done: "${article.title}" → ${result.category} (${result.importanceScore}/10)${result.isDuplicate ? " [DUPLICATE]" : ""}`);
+            if (article.processed) {
+                log.info(`Already processed: "${article.title}"`);
+                return { articleId, status: "already_processed" };
+            }
 
-        return {
-            articleId,
-            status: "analyzed",
-            category: result.category,
-            score: result.importanceScore,
-            isDuplicate: result.isDuplicate
-        };
+            log.info(`AI analyzing: "${article.title}"`);
 
-    },
-    {
-        connection,
-        concurrency: 2,
-        settings: {
-            lockDuration: 30000,
-            lockRenewTime: 15000,
-            stalledInterval: 5000,
-            maxStalledCount: 2,
-            retryProcessDelay: 5000
+            // Get recent processed article titles for duplicate detection
+            const recentArticles = await News.find({
+                processed: true,
+                _id: { $ne: article._id },
+                createdAt: { $gte: new Date(Date.now() - 48 * 60 * 60 * 1000) }
+            })
+                .select("title")
+                .lean();
+
+            const existingTitles = recentArticles.map(a => a.title);
+
+            const content = article.content || article.title;
+
+            const result = await analyzeArticle(article.title, content, existingTitles);
+
+            // Update the article with AI results
+            await News.findByIdAndUpdate(articleId, {
+                $set: {
+                    summary: result.summary,
+                    category: result.category,
+                    tags: result.tags,
+                    importanceScore: result.importanceScore,
+                    duplicate: result.isDuplicate,
+                    processed: true
+                }
+            });
+
+            log.success(`AI done: "${article.title}" → ${result.category} (${result.importanceScore}/10)${result.isDuplicate ? " [DUPLICATE]" : ""}`);
+
+            return {
+                articleId,
+                status: "analyzed",
+                category: result.category,
+                score: result.importanceScore,
+                isDuplicate: result.isDuplicate
+            };
+
+        },
+        {
+            connection,
+            concurrency: 2,
+            settings: {
+                lockDuration: 30000,
+                lockRenewTime: 15000,
+                stalledInterval: 5000,
+                maxStalledCount: 2,
+                retryProcessDelay: 5000
+            }
         }
-    }
-);
+    );
 
-aiWorker.on("failed", (job, err) => {
-    log.error(`AI job failed [${job?.data?.articleId}]:`, err.message);
-});
+    aiWorker.on("failed", (job, err) => {
+        log.error(`AI job failed [${job?.data?.articleId}]:`, err.message);
+    });
 
-module.exports = aiWorker;
+    return aiWorker;
+}
+
+module.exports = { createAiWorker };

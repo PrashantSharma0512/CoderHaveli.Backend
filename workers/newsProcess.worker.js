@@ -38,61 +38,65 @@ function detectCategory(title = "", tags = []) {
     return "General Tech";
 }
 
-const processWorker = new Worker(
-    "news-process",
-    async (job) => {
+function createProcessWorker() {
+    const processWorker = new Worker(
+        "news-process",
+        async (job) => {
 
-        const { articleId } = job.data;
+            const { articleId } = job.data;
 
-        const News = mongoose.model("News");
+            const News = mongoose.model("News");
 
-        const article = await News.findById(articleId);
+            const article = await News.findById(articleId);
 
-        if (!article) {
-            log.warn(`Article not found: ${articleId}`);
-            return { articleId, status: "not_found" };
-        }
-
-        log.info(`Extracting content: "${article.title}"`);
-
-        const extracted = await extractArticleContent(article.articleUrl);
-
-        const summary = (extracted && extracted.excerpt) 
-            ? extracted.excerpt 
-            : (article.content ? article.content.substring(0, 300) : article.title);
-
-        const category = detectCategory(article.title, article.tags);
-
-        await News.findByIdAndUpdate(articleId, {
-            $set: {
-                ...(extracted && extracted.content ? { content: extracted.content } : {}),
-                ...(extracted && extracted.byline ? { author: extracted.byline } : {}),
-                summary,
-                category,
-                processed: true
+            if (!article) {
+                log.warn(`Article not found: ${articleId}`);
+                return { articleId, status: "not_found" };
             }
-        });
 
-        log.success(`Article processed and marked ready: "${article.title}" (${category})`);
+            log.info(`Extracting content: "${article.title}"`);
 
-        return { articleId, status: "processed", category };
+            const extracted = await extractArticleContent(article.articleUrl);
 
-    },
-    {
-        connection,
-        concurrency: 2,
-        settings: {
-            lockDuration: 30000,
-            lockRenewTime: 15000,
-            stalledInterval: 5000,
-            maxStalledCount: 2,
-            retryProcessDelay: 5000
+            const summary = (extracted && extracted.excerpt) 
+                ? extracted.excerpt 
+                : (article.content ? article.content.substring(0, 300) : article.title);
+
+            const category = detectCategory(article.title, article.tags);
+
+            await News.findByIdAndUpdate(articleId, {
+                $set: {
+                    ...(extracted && extracted.content ? { content: extracted.content } : {}),
+                    ...(extracted && extracted.byline ? { author: extracted.byline } : {}),
+                    summary,
+                    category,
+                    processed: true
+                }
+            });
+
+            log.success(`Article processed and marked ready: "${article.title}" (${category})`);
+
+            return { articleId, status: "processed", category };
+
+        },
+        {
+            connection,
+            concurrency: 2,
+            settings: {
+                lockDuration: 30000,
+                lockRenewTime: 15000,
+                stalledInterval: 5000,
+                maxStalledCount: 2,
+                retryProcessDelay: 5000
+            }
         }
-    }
-);
+    );
 
-processWorker.on("failed", (job, err) => {
-    log.error(`Process job failed [${job?.data?.articleId}]:`, err.message);
-});
+    processWorker.on("failed", (job, err) => {
+        log.error(`Process job failed [${job?.data?.articleId}]:`, err.message);
+    });
 
-module.exports = processWorker;
+    return processWorker;
+}
+
+module.exports = { createProcessWorker };
