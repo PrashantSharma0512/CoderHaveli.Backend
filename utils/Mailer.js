@@ -1,60 +1,80 @@
-const { Resend } = require("resend");
+const nodemailer = require("nodemailer");
 
-let resendClient = null;
+let transporter = null;
 
-function getResendClient() {
-  if (!resendClient) {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) {
-      throw new Error("RESEND_API_KEY is missing in environment variables");
+function getTransporter() {
+  if (!transporter) {
+    const user = process.env.MAIL_USER;
+    const pass = process.env.MAIL_PASSWORD;
+
+    if (!user || !pass) {
+      throw new Error("MAIL_USER or MAIL_PASSWORD is missing in environment variables");
     }
-    resendClient = new Resend(apiKey);
+
+    const port = Number(process.env.SMTP_PORT) || 465;
+    const secure = port === 465;
+
+    transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port,
+      secure,
+      auth: {
+        user,
+        pass,
+      },
+      tls: {
+        rejectUnauthorized: false,
+      },
+    });
   }
-  return resendClient;
+  return transporter;
 }
 
-const defaultFrom =
-  process.env.RESEND_FROM_EMAIL || "CoderHaveli <onboarding@resend.dev>";
-
 /**
- * Helper to determine a valid from address for Resend.
- * If a custom verified from email is defined in env, prioritize it over raw @gmail.com addresses.
+ * Clean & resolve from header for Gmail SMTP.
+ * Preserves custom display names if provided, but ensures
+ * the sender address uses the authenticated MAIL_USER.
  */
 function resolveFrom(from) {
-  if (process.env.RESEND_FROM_EMAIL) {
-    return process.env.RESEND_FROM_EMAIL;
+  const mailUser = process.env.MAIL_USER;
+  if (!from || from.includes("@resend.dev")) {
+    return `"CoderHaveli" <${mailUser}>`;
   }
-  if (from && !from.includes("@gmail.com")) {
+  if (from.includes(mailUser)) {
     return from;
   }
-  return defaultFrom;
+  const match = from.match(/^"?([^"<]+)"?\s*<.*>$/);
+  if (match) {
+    return `"${match[1].trim()}" <${mailUser}>`;
+  }
+  return `"CoderHaveli" <${mailUser}>`;
 }
 
 /**
- * Resend Transporter wrapper
- * Provides `.sendMail({ from, to, subject, html, text })` for seamless compatibility.
+ * Mailer service
+ * Compatible with transporter.sendMail({ from, to, subject, html, text })
  */
 const Mailer = {
-  get resend() {
-    return getResendClient();
+  get transporter() {
+    return getTransporter();
   },
-  async sendMail({ from, to, subject, html, text }) {
-    const client = getResendClient();
-    const recipient = Array.isArray(to) ? to : [to];
 
-    const { data, error } = await client.emails.send({
-      from: resolveFrom(from),
+  async sendMail({ from, to, subject, html, text }) {
+    const client = getTransporter();
+    const recipient = Array.isArray(to) ? to.join(", ") : to;
+    const sender = resolveFrom(from);
+
+    return await client.sendMail({
+      from: sender,
       to: recipient,
       subject,
       html,
       text,
     });
+  },
 
-    if (error) {
-      throw new Error(error.message || JSON.stringify(error));
-    }
-
-    return data;
+  verify(callback) {
+    return getTransporter().verify(callback);
   },
 };
 

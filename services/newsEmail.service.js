@@ -31,7 +31,7 @@ async function getSubscribedUsers() {
  */
 async function sendNewsletterEmail(to, subject, html) {
     try {
-        const from = process.env.RESEND_FROM_EMAIL || "CoderHaveli Daily <onboarding@resend.dev>";
+        const from = process.env.EMAIL_FROM || process.env.RESEND_FROM_EMAIL || `"CoderHaveli Daily" <${process.env.MAIL_USER}>`;
 
         await Mailer.sendMail({
             from,
