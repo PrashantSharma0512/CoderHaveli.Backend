@@ -395,21 +395,19 @@ async function generateNewsletterContent(articles) {
 
     const articleList = articles
         .map((a, i) => {
-
+            const url = a.articleUrl || a.url || a.link || "";
             const snippet = a.content
-                ? a.content.substring(0, 400)
+                ? a.content.substring(0, 1200)
                 : (a.summary || a.title);
 
-
             return `[Article ${i + 1}]
-ID: ${a._id}
+ID: ${a._id || `article-${i + 1}`}
 Title: "${a.title}"
 Source: ${a.source || "Tech"}
-Excerpt: ${snippet}`;
-
+URL: ${url}
+Detailed Excerpt: ${snippet}`;
         })
         .join("\n\n");
-
 
     const today = new Date().toLocaleDateString(
         "en-US",
@@ -421,7 +419,6 @@ Excerpt: ${snippet}`;
         }
     );
 
-
     const prompt = `You are a senior tech editor and newsletter curator for "CoderHaveli Daily".
 
 Today's Date: ${today}
@@ -432,9 +429,13 @@ ${articleList}
 
 TASKS:
 
-1. Generate an engaging, beautifully formatted HTML newsletter email grouping these stories by category.
+1. Generate an in-depth, comprehensive, beautifully formatted HTML newsletter email grouping these stories by category.
+   For EVERY article card:
+   - Provide an in-depth technical explanation (3 to 4 comprehensive sentences): Explain the core announcement/event, how it works technically or architectural implications, and the broader industry context.
+   - Include a "Key Takeaways" bulleted section (2-3 concise bullet points) detailing why it matters to software engineers, developers, and tech leads.
+   - Include a styled, clickable "Read Full Story &rarr;" button linking directly to the article's provided URL.
 
-2. Provide a 2-sentence summary, category, and importance score (1-10) for each article so we can store them in our database.
+2. Provide a 3-sentence technical summary, category, and importance score (1-10) for each article so we can store them in our database.
 
 STRICT JSON OUTPUT FORMAT:
 
@@ -445,7 +446,7 @@ Return ONLY valid JSON (no markdown wrappers, no code fences, no commentary) mat
   "articles": [
     {
       "id": "article MongoDB ID from above",
-      "summary": "2-sentence high-impact summary",
+      "summary": "3-sentence in-depth technical summary",
       "category": "one of: AI/ML, Cloud, DevOps, Security, Web Development, Mobile, Open Source, General Tech",
       "importanceScore": 8
     }
@@ -471,148 +472,117 @@ HTML EMAIL GUIDELINES:
   Gold Border: #E8D79A
 
   Primary Text: #222222
-  Secondary Text: #555555
+  Secondary Text: #444444
   Muted Text: #8A8170
-
 
 - EMAIL BACKGROUND:
   Use ONLY pure white:
-
   background-color: #FFFFFF;
 
-  Do NOT use:
-  #FAF9F5
-  #FDFCF8
-  cream
-  beige
-  pearl
-  gray backgrounds
-
+  Do NOT use dark, cream, or beige backgrounds.
 
 - MAIN CONTAINER:
   Maximum width: 640px
   background: #FFFFFF;
   margin: 0 auto;
-
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 
 - HEADER:
   background: #FFFFFF;
-
-  Add a premium gold top border:
   border-top: 4px solid #D4AF37;
-
-  Add a subtle gold bottom divider:
   border-bottom: 1px solid #E8D79A;
-
+  padding: 24px 20px;
+  text-align: center;
 
 - NEWSLETTER TITLE:
   "CoderHaveli Daily"
-
-  Main text:
-  color: #222222;
-
-  Use #A67C00 for small gold highlights or decorative elements.
-
+  Main text: color: #222222; font-size: 26px; font-weight: 800;
+  Use #A67C00 for the "Daily" accent.
 
 - DATE:
-  color: #8A8170;
-
+  color: #8A8170; font-size: 13px; margin-top: 6px;
 
 - SECTION HEADERS:
   color: #A67C00;
-
-  Add a thin gold divider:
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
   border-bottom: 2px solid #E8D79A;
-
+  padding-bottom: 6px;
+  margin: 24px 0 16px;
 
 - ARTICLE CARDS:
   background: #FFFFFF;
   border: 1px solid #E8D79A;
   border-radius: 10px;
-  padding: 18px 20px;
-  margin-bottom: 16px;
-
-  Use only a very subtle gold-tinted shadow:
+  padding: 20px 22px;
+  margin-bottom: 20px;
   box-shadow: 0 2px 8px rgba(212, 175, 55, 0.08);
-
 
 - ARTICLE TITLES:
   color: #222222;
-  font-weight: bold;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.4;
+  margin: 8px 0;
 
+- DETAILED SUMMARY:
+  color: #444444;
+  font-size: 13.5px;
+  line-height: 1.65;
+  margin: 0 0 12px 0;
 
-- ARTICLE SUMMARY:
-  color: #555555;
-  line-height: 1.6;
+- KEY TAKEAWAYS:
+  Include a bulleted section:
+  <div style="margin: 10px 0 14px; background: #FFFDF7; border-left: 3px solid #D4AF37; padding: 10px 14px; border-radius: 0 6px 6px 0;">
+    <div style="font-size: 11px; font-weight: 700; color: #A67C00; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Key Takeaways:</div>
+    <ul style="margin: 0; padding-left: 18px; color: #555555; font-size: 12.5px; line-height: 1.55;">
+      <li>...point 1...</li>
+      <li>...point 2...</li>
+    </ul>
+  </div>
 
-
-- CATEGORY BADGES:
-  Use a very light gold background:
-
+- CATEGORY & IMPORTANCE BADGES:
+  Use a light gold pill badge:
   background: #FFF9E8;
   color: #A67C00;
   border: 1px solid #E8D79A;
+  border-radius: 16px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-block;
+  margin-right: 6px;
 
-  border-radius: 20px;
-  padding: 4px 10px;
-
-
-- GOLD USAGE:
-  Use gold ONLY for:
-  - Header border
-  - Section headings
-  - Section dividers
-  - Category badges
-  - Small decorative elements
-  - Metadata
-  - Footer divider
-  - CoderHaveli branding accents
-
-  Do NOT make large sections gold.
-
+- SOURCE LINK & READ MORE BUTTON (CRITICAL):
+  For EVERY article card, include a dedicated footer action row with the source name and a direct clickable button linking to its EXACT provided URL:
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #E8D79A;">
+    <tr>
+      <td align="left" style="font-size: 12px; color: #8A8170;">
+        Source: <strong style="color: #444444;">[Source Name]</strong>
+      </td>
+      <td align="right">
+        <a href="EXACT_ARTICLE_URL" target="_blank" style="display: inline-block; padding: 6px 14px; background-color: #FFF9E8; color: #A67C00; border: 1px solid #D4AF37; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 700;">Read Full Story &rarr;</a>
+      </td>
+    </tr>
+  </table>
+  IMPORTANT: You MUST use the exact URL provided for each article in the prompt. Do NOT make up or hallucinate URLs.
 
 - FOOTER:
   background: #FFFFFF;
-
-  Add:
   border-top: 1px solid #E8D79A;
-
-  CoderHaveli Team:
-  color: #A67C00;
-
-  Supporting text:
+  padding: 20px;
+  text-align: center;
   color: #8A8170;
-
-
-- OVERALL VISUAL STYLE:
-  Pure white background.
-  White article cards.
-  Gold accents.
-  Dark charcoal typography.
-  Minimal.
-  Premium.
-  Clean.
-  Spacious.
-  Modern editorial design.
-
-  The email should look like a premium
-  WHITE + GOLD technology newsletter.
-
+  font-size: 12px;
 
 - STRICT:
   Do NOT use dark backgrounds.
   Do NOT use black backgrounds.
-  Do NOT use cream backgrounds.
-  Do NOT use beige backgrounds.
-  Do NOT use pearl backgrounds.
-  Do NOT use gray backgrounds.
   Do NOT use gradients.
   Do NOT use excessive gold.
-
-  Absolutely NO URLs.
-  Absolutely NO <a> tags.
-  Absolutely NO clickable links.
-  
+  Ensure ALL links open in a new tab (target="_blank") and use the exact article URLs provided.
   `
 
 

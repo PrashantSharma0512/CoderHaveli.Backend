@@ -57,18 +57,26 @@ async function runPipelineTest() {
     console.log(`   - Summary: ${aiResult.summary}`);
     console.log(`   - Is Duplicate: ${aiResult.isDuplicate}`);
 
-    // 6. Gemini Consolidated Newsletter Generation Test (No Links/URLs)
-    console.log("\n[6/7] Testing Consolidated Daily Newsletter Generation (Strictly NO URLs)...");
+    // 6. Gemini Consolidated Newsletter Generation Test (Detailed + Source Links)
+    console.log("\n[6/7] Testing Consolidated Daily Newsletter Generation (Detailed with Source Links)...");
     const testArticles = [
         {
+            _id: sample._id || "test-1",
             title: sample.title,
+            source: testSource.name,
+            articleUrl: sample.link,
             category: aiResult.category,
+            content: (extracted && extracted.content) || sample.content,
             summary: aiResult.summary || "Summary of the article.",
             importanceScore: aiResult.importanceScore
         },
         {
+            _id: "test-2",
             title: "OpenAI Launches Next-Generation Reasoning Engine",
+            source: "OpenAI",
+            articleUrl: "https://openai.com/index/learning-to-reason-with-llms/",
             category: "AI/ML",
+            content: "OpenAI announced a new reasoning model that significantly outperforms previous benchmarks in competitive programming and scientific analysis.",
             summary: "OpenAI announced a new reasoning model that significantly outperforms previous benchmarks in competitive programming and scientific analysis.",
             importanceScore: 9
         }
@@ -81,16 +89,16 @@ async function runPipelineTest() {
     }
     console.log(`✅ Newsletter HTML generated (${newsletterHtml.length} characters)`);
 
-    // Check that NO <a> tags or URLs exist in the newsletter
+    // Verify source links and anchors exist in the newsletter
     const hasAnchorTags = /<a\s+[^>]*href/i.test(newsletterHtml);
     const hasHttpLinks = /https?:\/\/[^\s"'<>]+/i.test(newsletterHtml);
-    console.log(`   - Contains anchor <a> tags: ${hasAnchorTags ? "❌ YES" : "✅ NO"}`);
-    console.log(`   - Contains http(s) URLs: ${hasHttpLinks ? "❌ YES" : "✅ NO"}`);
+    console.log(`   - Contains anchor <a> tags: ${hasAnchorTags ? "✅ YES" : "❌ NO"}`);
+    console.log(`   - Contains http(s) URLs: ${hasHttpLinks ? "✅ YES" : "❌ NO"}`);
 
-    if (hasAnchorTags) {
-        console.warn("⚠️ Warning: Gemini included an anchor tag despite instructions!");
+    if (!hasAnchorTags) {
+        console.warn("⚠️ Warning: Newsletter HTML did not contain anchor tags for source links!");
     } else {
-        console.log("✅ Verified: Zero links or URLs in newsletter content!");
+        console.log("✅ Verified: Detailed newsletter with clickable source links generated successfully!");
     }
 
     // 7. Queue Health Check

@@ -17,25 +17,35 @@ const createLogger = require("../utils/logger");
 const log = createLogger("cron");
 
 // ── RSS Fetch: 8:00 AM IST ──────────────────────────
-cron.schedule("0 8 * * *", async () => {
-    log.info("Scheduled RSS fetch starting...");
-    try {
-        await runNewsIngestionPipeline();
-    } catch (error) {
-        log.error("RSS fetch cron failed:", error.message);
+cron.schedule("0 8 * * *",
+    async () => {
+        log.info("Scheduled RSS fetch starting...");
+        try {
+            await runNewsIngestionPipeline();
+        } catch (error) {
+            log.error("RSS fetch cron failed:", error.message);
+        }
+    },
+    {
+        timezone: "Asia/Kolkata"
     }
-});
+);
 
 log.success("RSS fetch cron registered (8:00 AM IST - On Demand)");
 
 // ── Daily Newsletter: 8:30 AM IST ───────────────
-cron.schedule("30 8 * * *", async () => {
-    log.info("Daily newsletter generation starting...");
-    try {
-        await runNewsletterPipeline({ date: new Date().toISOString() });
-    } catch (error) {
-        log.error("Newsletter cron failed:", error.message);
+cron.schedule("30 8 * * *",
+    async () => {
+        log.info("Daily newsletter generation starting...");
+        try {
+            await runNewsletterPipeline({ date: new Date().toISOString() });
+        } catch (error) {
+            log.error("Newsletter cron failed:", error.message);
+        }
+    },
+    {
+        timezone: "Asia/Kolkata"
     }
-});
+);
 
 log.success("Daily newsletter cron registered (8:30 AM IST - On Demand)");
