@@ -2,7 +2,7 @@
  * News Email Service
  * 
  * Sends newsletter HTML emails to subscribed users
- * using Resend.
+ * using Brevo HTTP API.
  */
 
 const mongoose = require("mongoose");
@@ -31,7 +31,7 @@ async function getSubscribedUsers() {
  */
 async function sendNewsletterEmail(to, subject, html) {
     try {
-        const from = process.env.EMAIL_FROM || process.env.RESEND_FROM_EMAIL || `"CoderHaveli Daily" <${process.env.MAIL_USER}>`;
+        const from = process.env.EMAIL_FROM || process.env.BREVO_SENDER_EMAIL || `"CoderHaveli Daily" <${process.env.MAIL_USER}>`;
 
         await Mailer.sendMail({
             from,
