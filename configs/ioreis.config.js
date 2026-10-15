@@ -13,10 +13,15 @@ const parsedUrl = new URL(redisUrl);
 const connection = new IORedis(redisUrl, {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
-    keepAlive: 10000,
+    // Note: keepAlive removed to allow Layerbase Free tier to sleep when idle
 
     tls: {
         servername: parsedUrl.hostname,
+    },
+
+    retryStrategy(times) {
+        // Back off exponentially up to 30s when idle/sleeping
+        return Math.min(times * 1000, 30000);
     },
 });
 

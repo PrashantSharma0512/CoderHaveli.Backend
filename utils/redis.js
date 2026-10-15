@@ -6,7 +6,7 @@ const REDIS_PORT = Number(process.env.REDIS_PORT) || 6379;
 const client = createClient({
     username: "default",
     password: process.env.REDIS_PASS,
-    pingInterval: 30000, // Periodically ping Redis to prevent idle timeout
+    // Note: pingInterval removed to allow Layerbase Free tier to sleep when idle
 
     socket: {
         host: REDIS_HOST,
@@ -17,12 +17,16 @@ const client = createClient({
 
         // IMPORTANT: Layerbase requires SNI
         servername: REDIS_HOST,
-        keepAlive: 5000,
 
         reconnectStrategy(retries) {
-            const delay = Math.min(retries * 100, 3000);
-            console.log(`Redis reconnecting in ${delay}ms...`);
-            return delay;
+            // If the server closed the connection because it entered idle sleep mode,
+            // stop retrying after 3 attempts so it can sleep peacefully.
+            // connectRedis() will automatically reconnect on the next request.
+            if (retries > 3) {
+                console.log("Redis is idle/sleeping. Will reconnect on next user request.");
+                return false;
+            }
+            return Math.min(retries * 200, 2000);
         },
     },
 });
