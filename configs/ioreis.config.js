@@ -13,20 +13,21 @@ const parsedUrl = new URL(redisUrl);
 const connection = new IORedis(redisUrl, {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
-    // Note: keepAlive removed to allow Layerbase Free tier to sleep when idle
+    // Do NOT connect when the server boots - only connect when news pipeline runs
+    lazyConnect: true,
 
     tls: {
         servername: parsedUrl.hostname,
     },
 
-    retryStrategy(times) {
-        // Back off exponentially up to 30s when idle/sleeping
-        return Math.min(times * 1000, 30000);
+    retryStrategy() {
+        // Stop reconnecting when idle/sleeping so it does NOT wake Layerbase
+        return null;
     },
 });
 
 connection.on("connect", () => {
-    console.log("✅ Connected to Layerbase Redis");
+    console.log("✅ Connected to Layerbase Redis (News Pipeline Active)");
 });
 
 connection.on("ready", () => {
@@ -34,11 +35,14 @@ connection.on("ready", () => {
 });
 
 connection.on("error", (err) => {
-    console.error("❌ Layerbase Redis Error:", err.message);
+    // Only log errors if the connection was not deliberately closed
+    if (connection.status !== "end") {
+        console.error("❌ Layerbase Redis Error:", err.message);
+    }
 });
 
 connection.on("close", () => {
-    console.log("⚠️ Layerbase Redis connection closed");
+    console.log("💤 Layerbase Redis connection closed (Entering Sleep)");
 });
 
 module.exports = connection;

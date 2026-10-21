@@ -10,7 +10,6 @@
 
 const mongoose = require("mongoose");
 const { getLatestNewsletter, getNewsletterHistory } = require("../services/newsletter.service");
-const { newsletterQueue } = require("../queues/news.queues");
 const createLogger = require("../utils/logger");
 
 const log = createLogger("newsletter");

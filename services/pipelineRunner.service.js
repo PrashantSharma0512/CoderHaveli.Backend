@@ -13,6 +13,7 @@
  * Result: Redis is 100% idle for ~23.5 hours every day.
  */
 
+const connection = require("../configs/ioreis.config");
 const { createFetchWorker } = require("../workers/newsFetch.worker");
 const { createProcessWorker } = require("../workers/newsProcess.worker");
 const { createNewsletterWorker } = require("../workers/newsletter.worker");
@@ -82,21 +83,27 @@ async function runNewsIngestionPipeline() {
     let processWorker = null;
 
     try {
-        // 1. Start workers on demand
+        // 1. Wake Layerbase Redis ONLY when pipeline begins
+        if (connection.status !== "ready" && connection.status !== "connecting") {
+            log.info("🔌 Connecting to Layerbase Redis for news ingestion...");
+            await connection.connect();
+        }
+
+        // 2. Start workers on demand
         fetchWorker = createFetchWorker();
         processWorker = createProcessWorker();
         log.info("On-demand fetch and process workers started.");
 
-        // 2. Dispatch RSS fetch jobs
+        // 3. Dispatch RSS fetch jobs
         await dispatchFetchJobs();
 
-        // 3. Wait for all fetch and extraction jobs to finish
+        // 4. Wait for all fetch and extraction jobs to finish
         await waitForQueuesToDrain([fetchQueue, processQueue]);
 
     } catch (err) {
         log.error("Error during news ingestion pipeline:", err.message);
     } finally {
-        // 4. Shut down workers to allow Redis to sleep
+        // 5. Shut down workers to allow Redis to sleep
         if (fetchWorker) {
             await fetchWorker.close();
             log.info("Fetch worker closed.");
@@ -104,6 +111,12 @@ async function runNewsIngestionPipeline() {
         if (processWorker) {
             await processWorker.close();
             log.info("Process worker closed.");
+        }
+
+        // 6. Disconnect from Layerbase so it can immediately hibernate
+        if (connection.status === "ready" || connection.status === "connecting") {
+            await connection.disconnect();
+            log.info("💤 Disconnected from Layerbase Redis. Server entering idle sleep.");
         }
 
         isIngestionRunning = false;
@@ -127,24 +140,30 @@ async function runNewsletterPipeline(options = {}) {
     let emailWorker = null;
 
     try {
-        // 1. Start workers on demand
+        // 1. Wake Layerbase Redis ONLY when pipeline begins
+        if (connection.status !== "ready" && connection.status !== "connecting") {
+            log.info("🔌 Connecting to Layerbase Redis for newsletter pipeline...");
+            await connection.connect();
+        }
+
+        // 2. Start workers on demand
         newsletterWorker = createNewsletterWorker();
         emailWorker = createEmailWorker();
         log.info("On-demand newsletter and email workers started.");
 
-        // 2. Add newsletter job
+        // 3. Add newsletter job
         const targetDate = options.date || new Date().toISOString();
         const jobId = `newsletter-${Date.now()}`;
         await newsletterQueue.add(jobId, { date: targetDate }, { jobId });
         log.info(`Newsletter job queued [${jobId}]`);
 
-        // 3. Wait for newsletter generation and email sending to finish
+        // 4. Wait for newsletter generation and email sending to finish
         await waitForQueuesToDrain([newsletterQueue, emailQueue]);
 
     } catch (err) {
         log.error("Error during newsletter pipeline:", err.message);
     } finally {
-        // 4. Shut down workers to allow Redis to sleep
+        // 5. Shut down workers to allow Redis to sleep
         if (newsletterWorker) {
             await newsletterWorker.close();
             log.info("Newsletter worker closed.");
@@ -152,6 +171,12 @@ async function runNewsletterPipeline(options = {}) {
         if (emailWorker) {
             await emailWorker.close();
             log.info("Email worker closed.");
+        }
+
+        // 6. Disconnect from Layerbase so it can immediately hibernate
+        if (connection.status === "ready" || connection.status === "connecting") {
+            await connection.disconnect();
+            log.info("💤 Disconnected from Layerbase Redis. Server entering idle sleep.");
         }
 
         isNewsletterRunning = false;
