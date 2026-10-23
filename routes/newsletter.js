@@ -23,6 +23,7 @@ const newsletterController = require("../controllers/newsletterController");
 router.get("/latest", newsletterController.latest);
 router.get("/history", newsletterController.history);
 router.get("/news", newsletterController.getNews);
+router.get("/topics", newsletterController.getTopics);
 
 // Authenticated endpoints
 router.post("/subscribe", Authenticated, newsletterController.subscribe);

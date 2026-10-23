@@ -221,19 +221,57 @@ async function getNews(req, res) {
 }
 
 /**
+ * GET /api/newsletter/topics
+ * Get all curated System Design roadmap topics and what topic is up next.
+ */
+async function getTopics(req, res) {
+
+    try {
+
+        const { getAllSystemDesignTopics, getNextSystemDesignTopic } = require("../services/newsletter.service");
+        const topics = getAllSystemDesignTopics();
+        const nextTopic = await getNextSystemDesignTopic();
+
+        res.json({
+            success: true,
+            totalTopics: topics.length,
+            nextTopic,
+            topics
+        });
+
+    } catch (error) {
+
+        log.error("Get topics error:", error.message);
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch topics"
+        });
+
+    }
+
+}
+
+/**
  * POST /api/newsletter/generate (admin only)
  * Manually trigger newsletter generation.
- * Optional body: { type: "daily" | "system_design" | "both" }
+ * Optional body: { type: "daily" | "system_design" | "both", topic: string, topicIndex: number }
  */
 async function triggerGenerate(req, res) {
 
     try {
 
         const type = req.body.type || req.query.type || "both";
+        const topic = req.body.topic;
+        const topicIndex = typeof req.body.topicIndex === "number" ? req.body.topicIndex : undefined;
 
         // Trigger on-demand pipeline asynchronously
         const { runNewsletterPipeline } = require("../services/pipelineRunner.service");
-        runNewsletterPipeline({ date: new Date().toISOString(), type }).catch(err => {
+        runNewsletterPipeline({
+            date: new Date().toISOString(),
+            type,
+            topic,
+            topicIndex
+        }).catch(err => {
             log.error("Manual pipeline run error:", err.message);
         });
 
@@ -261,5 +299,6 @@ module.exports = {
     latest,
     history,
     getNews,
+    getTopics,
     triggerGenerate
 };

@@ -82,15 +82,51 @@ async function getArticlesForSystemDesignNewsletter(limit = 10) {
 
 }
 
+const systemDesignTopics = require("../configs/systemDesignTopics.configs");
+
+/**
+ * Get the next sequential System Design topic from the curated syllabus.
+ * Uses count of already generated system_design newsletters to determine the exact next topic.
+ */
+async function getNextSystemDesignTopic(customIndex) {
+
+    if (typeof customIndex === "number" && customIndex >= 0 && customIndex < systemDesignTopics.length) {
+        return {
+            ...systemDesignTopics[customIndex],
+            syllabusIndex: customIndex + 1,
+            totalSyllabusTopics: systemDesignTopics.length
+        };
+    }
+
+    const Newsletter = mongoose.model("NewsLetter");
+    const count = await Newsletter.countDocuments({ type: "system_design" });
+    const index = count % systemDesignTopics.length;
+
+    return {
+        ...systemDesignTopics[index],
+        syllabusIndex: index + 1,
+        totalSyllabusTopics: systemDesignTopics.length
+    };
+
+}
+
+/**
+ * Get all curated System Design roadmap topics.
+ */
+function getAllSystemDesignTopics() {
+    return systemDesignTopics;
+}
+
 /**
  * Create a newsletter record in the database.
  */
-async function createNewsletter({ title, date, articles = [], html, markdown, type = "daily" }) {
+async function createNewsletter({ title, topic = "", date, articles = [], html, markdown, type = "daily" }) {
 
     const Newsletter = mongoose.model("NewsLetter");
 
     const newsletter = await Newsletter.create({
         title,
+        topic,
         date,
         type,
         articles: (articles || []).map(a => a._id).filter(Boolean),
@@ -183,6 +219,8 @@ async function getNewsletterHistory(page = 1, limit = 10, type) {
 module.exports = {
     getArticlesForNewsletter,
     getArticlesForSystemDesignNewsletter,
+    getNextSystemDesignTopic,
+    getAllSystemDesignTopics,
     createNewsletter,
     markArticlesAsIncluded,
     getLatestNewsletter,

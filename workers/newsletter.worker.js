@@ -21,7 +21,7 @@ require("dotenv").config();
 const { Worker } = require("bullmq");
 const mongoose = require("mongoose");
 const connection = require("../configs/ioreis.config");
-const { getArticlesForNewsletter, getArticlesForSystemDesignNewsletter, createNewsletter, markArticlesAsIncluded } = require("../services/newsletter.service");
+const { getArticlesForNewsletter, getArticlesForSystemDesignNewsletter, getNextSystemDesignTopic, createNewsletter, markArticlesAsIncluded } = require("../services/newsletter.service");
 const { generateNewsletterContent, generateSystemDesignNewsletterContent } = require("../services/newsAi.service");
 const { emailQueue } = require("../queues/news.queues");
 const createLogger = require("../utils/logger");
@@ -47,20 +47,28 @@ function createNewsletterWorker() {
             let articles = [];
             let aiResult = null;
             let newsletterTitle = "";
+            let topicName = "";
 
             if (type === "system_design") {
-                // System Design & Node.js Newsletter
+                // System Design & Node.js Newsletter with Curated Syllabus
+                const curatedTopic = job.data.topic
+                    ? (typeof job.data.topic === "string" ? { title: job.data.topic, systemDesignFocus: job.data.topic, nodeJsFocus: "Node.js backend internals" } : job.data.topic)
+                    : await getNextSystemDesignTopic(job.data.topicIndex);
+
+                topicName = curatedTopic ? curatedTopic.title : "System Design & Node.js";
+                log.info(`Selected Curated Topic [Lesson ${curatedTopic?.syllabusIndex || 1}]: "${topicName}"`);
+
                 articles = await getArticlesForSystemDesignNewsletter(10);
                 log.info(`Generating System Design & Node.js newsletter (${articles.length} articles ingested)...`);
 
-                aiResult = await generateSystemDesignNewsletterContent(articles);
+                aiResult = await generateSystemDesignNewsletterContent(articles, curatedTopic);
 
                 if (!aiResult || !aiResult.html) {
                     log.error("Gemini failed to generate system design newsletter content");
                     return { status: "failed", reason: "ai_generation_failed" };
                 }
 
-                newsletterTitle = aiResult.title || `CoderHaveli Engineering — System Design & Node.js (${today})`;
+                newsletterTitle = aiResult.title || `CoderHaveli Engineering — ${topicName} (${today})`;
 
             } else {
                 // Standard Daily Tech Newsletter
@@ -87,6 +95,7 @@ function createNewsletterWorker() {
             // Step 3: Save newsletter to database
             const newsletter = await createNewsletter({
                 title: newsletterTitle,
+                topic: topicName,
                 date: new Date(date),
                 articles,
                 html,

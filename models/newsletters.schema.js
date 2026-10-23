@@ -15,6 +15,7 @@ module.exports = (mongoose) => {
                 ],
                 default: "daily"
             },
+            topic: String,
             articles: [{
                 type: mongoose.Schema.Types.ObjectId,
                 ref: "News"

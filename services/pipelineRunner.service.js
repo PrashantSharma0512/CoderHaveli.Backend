@@ -163,7 +163,12 @@ async function runNewsletterPipeline(options = {}) {
 
         if (pipelineType === "system_design" || pipelineType === "both") {
             const sdJobId = `newsletter-system-design-${Date.now()}`;
-            await newsletterQueue.add(sdJobId, { date: targetDate, type: "system_design" }, { jobId: sdJobId });
+            await newsletterQueue.add(sdJobId, {
+                date: targetDate,
+                type: "system_design",
+                topic: options.topic,
+                topicIndex: options.topicIndex
+            }, { jobId: sdJobId });
             log.info(`System Design & Node.js newsletter job queued [${sdJobId}]`);
         }
 

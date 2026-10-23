@@ -717,7 +717,7 @@ HTML EMAIL GUIDELINES:
  *     articles: [{ id, summary, category, importanceScore }]
  * }
  */
-async function generateSystemDesignNewsletterContent(articles = []) {
+async function generateSystemDesignNewsletterContent(articles = [], curatedTopic = null) {
 
     const articleList = (articles || [])
         .map((a, i) => {
@@ -747,52 +747,73 @@ Detailed Excerpt: ${snippet}`;
 
     const hasArticles = Array.isArray(articles) && articles.length > 0;
 
-    const prompt = `You are a Principal Distributed Systems Architect and Senior Node.js Backend Engineer writing for "CoderHaveli Engineering" (System Design & Node.js Edition).
+    const topicDirective = curatedTopic
+        ? `TODAY'S MANDATORY SYLLABUS TOPIC (Lesson ${curatedTopic.syllabusIndex || 1} of ${curatedTopic.totalSyllabusTopics || 20}):
+Topic Title: "${curatedTopic.title}"
+System Design Focus: ${curatedTopic.systemDesignFocus}
+Node.js Focus: ${curatedTopic.nodeJsFocus}
+Architecture Flow Reference: ${curatedTopic.diagramFlow}
+Rule of Thumb: "${curatedTopic.ruleOfThumb}"
+
+You MUST center Section 1 (Architectural Blueprint) around this specific System Design focus, and Section 2 around this Node.js focus.`
+        : `No predefined topic provided. Select an advanced, practical distributed systems and Node.js topic.`;
+
+    const prompt = `You are a Principal Distributed Systems Architect and Senior Node.js Core Engineer writing for "CoderHaveli Engineering" (System Design & Node.js Edition).
 
 Today's Date: ${today}
 
-${hasArticles ? `Here are recently ingested technical articles:\n${articleList}` : `No external articles provided today. Generate a complete, self-contained, in-depth System Design Blueprint and Node.js Deep Dive.`}
+${topicDirective}
+
+${hasArticles ? `Here are recently ingested technical articles from Netflix, Meta, AWS, or Node.js:\n${articleList}` : `No external articles provided today. Craft an exhaustive, self-contained architectural masterclass.`}
 
 YOUR MISSION:
-Generate an in-depth, production-grade technical newsletter email. This newsletter is read by backend engineers, technical architects, and full-stack developers who care deeply about scale, distributed systems, and Node.js performance.
+Generate an exhaustive, highly detailed, production-grade technical newsletter email. This newsletter is read by principal engineers, system architects, and senior backend developers. Avoid vague summaries; provide deep engineering rigor, concrete throughput and latency numbers, architectural edge-cases, and rich visual ASCII diagrams.
 
-SECTIONS TO INCLUDE IN THE HTML:
+CRITICAL REQUIREMENTS:
 
-1. HEADER:
-   - Brand: "CoderHaveli Engineering"
-   - Edition pill badge: "System Design & Node.js Deep Dive"
-   - Date: "${today}"
-   - Brief intro paragraph setting the theme.
+1. MANDATORY ASCII DIAGRAMS (MUST INCLUDE AT LEAST TWO VISUAL ASCII SCHEMATICS):
+   Every diagram MUST be rendered inside a styled <pre> tag with white-space: pre; font-family: monospace so characters never wrap:
+   - DIAGRAM 1 (System Design Architecture Topology):
+     A multi-tier ASCII box diagram showing how components interact (e.g. Clients -> Load Balancer -> Node.js Cluster -> Redis/Cache Cluster -> Database Master/Replica). Use clean box-drawing characters:
+     ┌───────────┐        ┌─────────────────┐        ┌──────────────────┐
+     │  Clients  │ ─────> │  Load Balancer  │ ─────> │   API Gateway    │
+     └───────────┘        └─────────────────┘        └─────────┬────────┘
+                                                               │
+                                                               ▼
+                                                      ...multi-tier flow...
+   - DIAGRAM 2 (Node.js Execution & Memory / State Flow):
+     A dedicated ASCII diagram explaining the Node.js internal flow (e.g., Call Stack -> Microtask Queue -> Libuv Thread Pool -> Event Loop Tick Phases, or Stream Buffer HighWaterMark backpressure flow).
 
-2. SECTION 1: ARCHITECTURAL BLUEPRINT (System Design Deep Dive)
-   - Pick a practical distributed system design topic (e.g. Distributed Caching & Invalidation Patterns, Building High-Throughput Rate Limiters with Redis Token Bucket, Event-Driven Architectures with Kafka/RabbitMQ, Database Sharding & Read Replicas, Microservices Resiliency with Circuit Breakers, or Designing Real-time WebSockets at 1M Connections).
-   - Problem Statement & Scale (Throughput, P99 Latency, High Availability).
-   - Architecture & Data Flow: Clear explanation of components.
-   - Monospace diagram flow box:
-     <div style="background: #FFFDF7; border: 1px solid #E8D79A; border-radius: 6px; padding: 12px 16px; font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; line-height: 1.5; color: #735100; margin: 12px 0; overflow-x: auto;">
-       [Client] ──HTTPS──> [Load Balancer] ──> [Node.js Gateway] ──> [Redis Cluster] ──> [PostgreSQL Shards]
-     </div>
-   - Key Tradeoffs & Edge Cases (CAP Theorem, Network Partitions, Split-Brain prevention).
-   - Key Architectural Takeaways bullet points.
+   Render every ASCII diagram inside this exact HTML element:
+   <pre style="background: #FFFDF7; border: 1px solid #E8D79A; border-left: 4px solid #D4AF37; border-radius: 6px; padding: 14px 16px; font-family: 'Consolas', 'Courier New', monospace; font-size: 11.5px; line-height: 1.35; color: #5a4000; overflow-x: auto; white-space: pre; margin: 14px 0;">
+...YOUR MULTI-TIER ASCII ART...
+   </pre>
 
-3. SECTION 2: NODE.JS INTERNALS & PRODUCTION PATTERNS
-   - Pick a core Node.js backend engineering topic (e.g. Demystifying the Node.js Event Loop & Libuv Phases, Tuning UV_THREADPOOL_SIZE for crypto/fs operations, Stream Backpressure & High-Throughput Pipelines, Worker Threads vs Cluster Mode for CPU Bound Tasks, Avoiding Memory Leaks in Long-Running V8 Heaps, or Async Context Tracking with AsyncLocalStorage).
-   - In-depth explanation of how Node.js / V8 handles it internally.
-   - Clean, syntax-styled JavaScript code snippet with comments:
-     <pre style="background: #FFFDF7; border: 1px solid #E8D79A; border-radius: 6px; padding: 12px 14px; font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; line-height: 1.5; color: #222222; overflow-x: auto; margin: 10px 0;">...code snippet with comments...</pre>
-   - Production Best Practices & Common Pitfalls.
+2. SECTION 1: ARCHITECTURAL BLUEPRINT (IN-DEPTH SYSTEM DESIGN BREAKDOWN)
+   - Title: "${curatedTopic ? curatedTopic.title : "Architectural Blueprint"}"
+   - Concrete Scale & Traffic SLAs: Define throughput (e.g., 50,000–100,000 RPS), Latency budgets (P99 < 15ms), and availability target (99.99%).
+   - Deep Technical Explanation: Explain how components communicate, network protocols used (HTTP/2, gRPC, TCP sockets), and serialization tradeoffs (JSON vs Protocol Buffers).
+   - Insert ASCII DIAGRAM 1 (Architecture Topology).
+   - Step-by-Step Request Flow: Numbered breakdown (Steps 1 to 5) tracking a request through every hop.
+   - Distributed Edge Cases & Failure Mitigation: What happens during network partitions, split-brain, cache stampedes, or primary failover.
+   - CAP Theorem & Tradeoffs: Explicit breakdown of Consistency vs Availability choices made.
+   - Key Takeaways: 3 concise, bulleted rules for software engineers.
 
-${hasArticles ? `4. SECTION 3: CURATED ENGINEERING & ARCHITECTURE READS:
-   - For the articles provided above, include clean article cards with:
-     - Title
-     - Source & Category badges
-     - Technical explanation (why it matters to backend engineers)
-     - A clickable "Read Full Story &rarr;" button linking to the EXACT provided article URL.` : `4. SECTION 3: SYSTEM DESIGN CHALLENGE OF THE DAY:
-   - Present a classic real-world architecture challenge (e.g. "How to design a Distributed Unique ID Generator like Twitter Snowflake" or "How to handle double-spending in digital wallets").
-   - Step-by-step breakdown and recommended design.`}
+3. SECTION 2: NODE.JS INTERNALS & PRODUCTION PATTERNS (IN-DEPTH ENGINEERING)
+   - Title: "Node.js Under the Hood: ${curatedTopic ? curatedTopic.nodeJsFocus : "Core Internals"}"
+   - Engine-Level Mechanics: Deep technical dive into how V8, Libuv C++ event loop, POSIX threads, and memory heaps handle this mechanism.
+   - Insert ASCII DIAGRAM 2 (Node.js Internal State / Execution Flow).
+   - Production-Grade Code Snippet: Full, realistic JavaScript/Node.js implementation with thorough comments, error handling, and clean async/await or streams/ioredis patterns.
+     Wrap in:
+     <pre style="background: #FFFDF7; border: 1px solid #E8D79A; border-left: 4px solid #D4AF37; border-radius: 6px; padding: 14px; font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; line-height: 1.5; color: #222222; overflow-x: auto; white-space: pre; margin: 12px 0;">...CODE...</pre>
+   - Production Gotchas & Anti-Patterns: 3 concrete pitfalls to avoid in high-scale production.
 
-5. SECTION 4: ARCHITECTURAL RULE OF THUMB / PRO-TIP:
-   - A high-leverage rule of thumb (e.g. Latency Numbers Every Engineer Should Know, Connection Pool sizing formula, Idempotency Keys in API Design).
+4. SECTION 3: CURATED ENGINEERING READS OR INTERVIEW CHALLENGE
+   - If articles are available, include them with title, badges, deep technical explanation, and a "Read Full Story &rarr;" button.
+   - If no articles are available, present a real-world System Design Interview Challenge with step-by-step reasoning.
+
+5. SECTION 4: ARCHITECTURAL RULE OF THUMB
+   - ${curatedTopic && curatedTopic.ruleOfThumb ? `Highlight this rule of thumb: "${curatedTopic.ruleOfThumb}" with 2 sentences explaining its real-world significance.` : "A high-leverage rule of thumb (e.g. Latency Numbers Every Engineer Should Know, Connection Pool sizing formula)."}
 
 6. FOOTER:
    - CoderHaveli signature, subscription note, and social links.
@@ -805,6 +826,7 @@ HTML EMAIL STYLING RULES:
 - Gold accents: Primary #D4AF37, Accent #A67C00, Soft background #FFF9E8, Border #E8D79A.
 - Font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif.
 - All links must use target="_blank".
+- ALL ASCII diagrams and Code snippets MUST have white-space: pre; so layout is preserved!
 
 STRICT JSON OUTPUT FORMAT:
 Return ONLY valid JSON (no markdown wrappers, no code fences, no commentary) matching this schema:
