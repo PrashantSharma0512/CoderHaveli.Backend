@@ -21,8 +21,8 @@ require("dotenv").config();
 const { Worker } = require("bullmq");
 const mongoose = require("mongoose");
 const connection = require("../configs/ioreis.config");
-const { getArticlesForNewsletter, createNewsletter, markArticlesAsIncluded } = require("../services/newsletter.service");
-const { generateNewsletterContent } = require("../services/newsAi.service");
+const { getArticlesForNewsletter, getArticlesForSystemDesignNewsletter, createNewsletter, markArticlesAsIncluded } = require("../services/newsletter.service");
+const { generateNewsletterContent, generateSystemDesignNewsletterContent } = require("../services/newsAi.service");
 const { emailQueue } = require("../queues/news.queues");
 const createLogger = require("../utils/logger");
 
@@ -33,31 +33,10 @@ function createNewsletterWorker() {
         "news-newsletter",
         async (job) => {
 
-            const { date } = job.data;
+            const { date, type = "daily" } = job.data;
 
-            log.info(`Generating newsletter for: ${date}`);
+            log.info(`Generating ${type} newsletter for: ${date}`);
 
-            // Step 1: Get eligible articles
-            const articles = await getArticlesForNewsletter(15);
-
-            if (articles.length === 0) {
-                log.warn("No articles available for newsletter — skipping");
-                return { status: "skipped", reason: "no_articles" };
-            }
-
-            log.info(`Generating newsletter from ${articles.length} articles in 1 Gemini call...`);
-
-            // Step 2: Generate consolidated HTML + structured article data via Gemini (1 single call)
-            const aiResult = await generateNewsletterContent(articles);
-
-            if (!aiResult || !aiResult.html) {
-                log.error("Gemini failed to generate newsletter content");
-                return { status: "failed", reason: "ai_generation_failed" };
-            }
-
-            const html = aiResult.html;
-
-            // Step 3: Save newsletter to database
             const today = new Date().toLocaleDateString("en-US", {
                 weekday: "long",
                 month: "long",
@@ -65,11 +44,53 @@ function createNewsletterWorker() {
                 year: "numeric"
             });
 
+            let articles = [];
+            let aiResult = null;
+            let newsletterTitle = "";
+
+            if (type === "system_design") {
+                // System Design & Node.js Newsletter
+                articles = await getArticlesForSystemDesignNewsletter(10);
+                log.info(`Generating System Design & Node.js newsletter (${articles.length} articles ingested)...`);
+
+                aiResult = await generateSystemDesignNewsletterContent(articles);
+
+                if (!aiResult || !aiResult.html) {
+                    log.error("Gemini failed to generate system design newsletter content");
+                    return { status: "failed", reason: "ai_generation_failed" };
+                }
+
+                newsletterTitle = aiResult.title || `CoderHaveli Engineering — System Design & Node.js (${today})`;
+
+            } else {
+                // Standard Daily Tech Newsletter
+                articles = await getArticlesForNewsletter(15);
+
+                if (articles.length === 0) {
+                    log.warn("No articles available for daily newsletter — skipping");
+                    return { status: "skipped", reason: "no_articles" };
+                }
+
+                log.info(`Generating daily newsletter from ${articles.length} articles in 1 Gemini call...`);
+                aiResult = await generateNewsletterContent(articles);
+
+                if (!aiResult || !aiResult.html) {
+                    log.error("Gemini failed to generate daily newsletter content");
+                    return { status: "failed", reason: "ai_generation_failed" };
+                }
+
+                newsletterTitle = `CoderHaveli Daily — ${today}`;
+            }
+
+            const html = aiResult.html;
+
+            // Step 3: Save newsletter to database
             const newsletter = await createNewsletter({
-                title: `CoderHaveli Daily — ${today}`,
+                title: newsletterTitle,
                 date: new Date(date),
                 articles,
-                html
+                html,
+                type
             });
 
             // Step 4: Backfill AI summaries and categories to News documents & mark as included
@@ -92,8 +113,10 @@ function createNewsletterWorker() {
                 }
             }
 
-            const articleIds = articles.map(a => a._id);
-            await markArticlesAsIncluded(articleIds);
+            if (articles.length > 0) {
+                const articleIds = articles.map(a => a._id);
+                await markArticlesAsIncluded(articleIds);
+            }
 
             // Step 5: Queue email delivery
             await emailQueue.add(
@@ -102,11 +125,12 @@ function createNewsletterWorker() {
                 { jobId: `email-${newsletter._id}` }
             );
 
-            log.success(`Newsletter generated and queued for email: ${newsletter._id}`);
+            log.success(`[${type}] Newsletter generated and queued for email: ${newsletter._id}`);
 
             return {
                 status: "generated",
                 newsletterId: newsletter._id.toString(),
+                type,
                 articleCount: articles.length
             };
 

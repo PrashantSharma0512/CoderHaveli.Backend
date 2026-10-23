@@ -33,12 +33,12 @@ cron.schedule("0 8 * * *",
 
 log.success("RSS fetch cron registered (8:00 AM IST - On Demand)");
 
-// ── Daily Newsletter: 8:30 AM IST ───────────────
+// ── Daily Newsletter & System Design Digest: 8:30 AM IST ───────────────
 cron.schedule("30 8 * * *",
     async () => {
-        log.info("Daily newsletter generation starting...");
+        log.info("Daily newsletter & System Design digest pipeline starting...");
         try {
-            await runNewsletterPipeline({ date: new Date().toISOString() });
+            await runNewsletterPipeline({ date: new Date().toISOString(), type: "both" });
         } catch (error) {
             log.error("Newsletter cron failed:", error.message);
         }
@@ -48,4 +48,4 @@ cron.schedule("30 8 * * *",
     }
 );
 
-log.success("Daily newsletter cron registered (8:30 AM IST - On Demand)");
+log.success("Daily newsletter & System Design cron registered (8:30 AM IST - On Demand)");

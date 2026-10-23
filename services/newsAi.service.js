@@ -702,10 +702,167 @@ HTML EMAIL GUIDELINES:
 }
 
 
+/**
+ * Generate a consolidated System Design & Node.js Deep Dive newsletter.
+ * 
+ * Hybrid approach:
+ * - Ingests and highlights eligible engineering / Node.js articles
+ * - Crafts comprehensive architectural blueprints and Node.js production patterns
+ *   even when breaking news is scarce.
+ * 
+ * Returns:
+ * {
+ *     title,
+ *     html,
+ *     articles: [{ id, summary, category, importanceScore }]
+ * }
+ */
+async function generateSystemDesignNewsletterContent(articles = []) {
+
+    const articleList = (articles || [])
+        .map((a, i) => {
+            const url = a.articleUrl || a.url || a.link || "";
+            const snippet = a.content
+                ? a.content.substring(0, 1200)
+                : (a.summary || a.title);
+
+            return `[Article ${i + 1}]
+ID: ${a._id || `article-${i + 1}`}
+Title: "${a.title}"
+Source: ${a.source || "Engineering"}
+URL: ${url}
+Detailed Excerpt: ${snippet}`;
+        })
+        .join("\n\n");
+
+    const today = new Date().toLocaleDateString(
+        "en-US",
+        {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric"
+        }
+    );
+
+    const hasArticles = Array.isArray(articles) && articles.length > 0;
+
+    const prompt = `You are a Principal Distributed Systems Architect and Senior Node.js Backend Engineer writing for "CoderHaveli Engineering" (System Design & Node.js Edition).
+
+Today's Date: ${today}
+
+${hasArticles ? `Here are recently ingested technical articles:\n${articleList}` : `No external articles provided today. Generate a complete, self-contained, in-depth System Design Blueprint and Node.js Deep Dive.`}
+
+YOUR MISSION:
+Generate an in-depth, production-grade technical newsletter email. This newsletter is read by backend engineers, technical architects, and full-stack developers who care deeply about scale, distributed systems, and Node.js performance.
+
+SECTIONS TO INCLUDE IN THE HTML:
+
+1. HEADER:
+   - Brand: "CoderHaveli Engineering"
+   - Edition pill badge: "System Design & Node.js Deep Dive"
+   - Date: "${today}"
+   - Brief intro paragraph setting the theme.
+
+2. SECTION 1: ARCHITECTURAL BLUEPRINT (System Design Deep Dive)
+   - Pick a practical distributed system design topic (e.g. Distributed Caching & Invalidation Patterns, Building High-Throughput Rate Limiters with Redis Token Bucket, Event-Driven Architectures with Kafka/RabbitMQ, Database Sharding & Read Replicas, Microservices Resiliency with Circuit Breakers, or Designing Real-time WebSockets at 1M Connections).
+   - Problem Statement & Scale (Throughput, P99 Latency, High Availability).
+   - Architecture & Data Flow: Clear explanation of components.
+   - Monospace diagram flow box:
+     <div style="background: #FFFDF7; border: 1px solid #E8D79A; border-radius: 6px; padding: 12px 16px; font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; line-height: 1.5; color: #735100; margin: 12px 0; overflow-x: auto;">
+       [Client] ──HTTPS──> [Load Balancer] ──> [Node.js Gateway] ──> [Redis Cluster] ──> [PostgreSQL Shards]
+     </div>
+   - Key Tradeoffs & Edge Cases (CAP Theorem, Network Partitions, Split-Brain prevention).
+   - Key Architectural Takeaways bullet points.
+
+3. SECTION 2: NODE.JS INTERNALS & PRODUCTION PATTERNS
+   - Pick a core Node.js backend engineering topic (e.g. Demystifying the Node.js Event Loop & Libuv Phases, Tuning UV_THREADPOOL_SIZE for crypto/fs operations, Stream Backpressure & High-Throughput Pipelines, Worker Threads vs Cluster Mode for CPU Bound Tasks, Avoiding Memory Leaks in Long-Running V8 Heaps, or Async Context Tracking with AsyncLocalStorage).
+   - In-depth explanation of how Node.js / V8 handles it internally.
+   - Clean, syntax-styled JavaScript code snippet with comments:
+     <pre style="background: #FFFDF7; border: 1px solid #E8D79A; border-radius: 6px; padding: 12px 14px; font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; line-height: 1.5; color: #222222; overflow-x: auto; margin: 10px 0;">...code snippet with comments...</pre>
+   - Production Best Practices & Common Pitfalls.
+
+${hasArticles ? `4. SECTION 3: CURATED ENGINEERING & ARCHITECTURE READS:
+   - For the articles provided above, include clean article cards with:
+     - Title
+     - Source & Category badges
+     - Technical explanation (why it matters to backend engineers)
+     - A clickable "Read Full Story &rarr;" button linking to the EXACT provided article URL.` : `4. SECTION 3: SYSTEM DESIGN CHALLENGE OF THE DAY:
+   - Present a classic real-world architecture challenge (e.g. "How to design a Distributed Unique ID Generator like Twitter Snowflake" or "How to handle double-spending in digital wallets").
+   - Step-by-step breakdown and recommended design.`}
+
+5. SECTION 4: ARCHITECTURAL RULE OF THUMB / PRO-TIP:
+   - A high-leverage rule of thumb (e.g. Latency Numbers Every Engineer Should Know, Connection Pool sizing formula, Idempotency Keys in API Design).
+
+6. FOOTER:
+   - CoderHaveli signature, subscription note, and social links.
+
+HTML EMAIL STYLING RULES:
+- THEME: Elegant Pure White with Gold Accents.
+- ENTIRE EMAIL background must be PURE WHITE: background-color: #FFFFFF
+- Maximum width: 640px, margin: 0 auto.
+- Primary Text: #222222, Secondary: #444444, Muted: #8A8170.
+- Gold accents: Primary #D4AF37, Accent #A67C00, Soft background #FFF9E8, Border #E8D79A.
+- Font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif.
+- All links must use target="_blank".
+
+STRICT JSON OUTPUT FORMAT:
+Return ONLY valid JSON (no markdown wrappers, no code fences, no commentary) matching this schema:
+{
+  "title": "CoderHaveli Engineering — [Topic Name, e.g. Distributed Caching & Node.js Event Loop]",
+  "html": "<div style=\\"...\\">...complete styled HTML email...</div>",
+  "articles": [
+    {
+      "id": "article MongoDB ID if provided",
+      "summary": "3-sentence technical summary",
+      "category": "System Design or Node.js",
+      "importanceScore": 9
+    }
+  ]
+}`;
+
+    try {
+        const response = await generateContentWithRetry(prompt);
+        let text = response.text.trim();
+
+        text = text
+            .replace(/^```json\s*/i, "")
+            .replace(/^```html\s*/i, "")
+            .replace(/^```\s*/i, "")
+            .replace(/\s*```$/i, "")
+            .trim();
+
+        try {
+            const parsed = JSON.parse(text);
+
+            return {
+                title: parsed.title || `CoderHaveli Engineering — System Design & Node.js (${today})`,
+                html: parsed.html || "",
+                articles: Array.isArray(parsed.articles) ? parsed.articles : []
+            };
+        } catch (jsonErr) {
+            if (text.includes("<html") || text.includes("<div") || text.includes("<table")) {
+                log.warn("Gemini returned raw HTML instead of JSON for system design newsletter — using text as HTML");
+                return {
+                    title: `CoderHaveli Engineering — System Design & Node.js (${today})`,
+                    html: text,
+                    articles: []
+                };
+            }
+
+            log.error("Failed to parse Gemini response as JSON for system design newsletter:", jsonErr.message);
+            throw jsonErr;
+        }
+
+    } catch (error) {
+        log.error("Gemini system design newsletter generation failed:", error.message);
+        throw error;
+    }
+
+}
+
 module.exports = {
-
     analyzeArticle,
-
-    generateNewsletterContent
-
+    generateNewsletterContent,
+    generateSystemDesignNewsletterContent
 };

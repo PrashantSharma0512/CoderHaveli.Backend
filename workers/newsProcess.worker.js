@@ -28,11 +28,13 @@ const log = createLogger("worker");
 
 function detectCategory(title = "", tags = []) {
     const text = (title + " " + tags.join(" ")).toLowerCase();
+    if (/system design|distributed system|microservice|load balanc|sharding|caching|redis|kafka|database design|scalab|high availability|fault toleran|replication|partition|raft|paxos|cqrs|event driven|throughput|latency/.test(text)) return "System Design";
+    if (/node\.?js|express|nestjs|event loop|libuv|v8 engine|worker threads|streams|npm|backend|fastify|deno|bun/.test(text)) return "Node.js";
     if (/ai|artificial intelligence|llm|gpt|gemini|claude|machine learning|openai/.test(text)) return "AI/ML";
     if (/cloud|aws|azure|gcp|google cloud/.test(text)) return "Cloud";
     if (/devops|docker|kubernetes|ci\/cd|container/.test(text)) return "DevOps";
     if (/security|vulnerability|hack|cve|malware|breach/.test(text)) return "Security";
-    if (/web|javascript|typescript|react|next\.?js|node|css|html/.test(text)) return "Web Development";
+    if (/web|javascript|typescript|react|next\.?js|css|html/.test(text)) return "Web Development";
     if (/mobile|android|ios|apple|swift|flutter/.test(text)) return "Mobile";
     if (/open[- ]source|github|git|linux/.test(text)) return "Open Source";
     return "General Tech";

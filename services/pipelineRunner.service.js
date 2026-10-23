@@ -151,11 +151,21 @@ async function runNewsletterPipeline(options = {}) {
         emailWorker = createEmailWorker();
         log.info("On-demand newsletter and email workers started.");
 
-        // 3. Add newsletter job
+        // 3. Add newsletter jobs based on options.type ("daily", "system_design", or default "both")
         const targetDate = options.date || new Date().toISOString();
-        const jobId = `newsletter-${Date.now()}`;
-        await newsletterQueue.add(jobId, { date: targetDate }, { jobId });
-        log.info(`Newsletter job queued [${jobId}]`);
+        const pipelineType = options.type || "both";
+
+        if (pipelineType === "daily" || pipelineType === "both") {
+            const dailyJobId = `newsletter-daily-${Date.now()}`;
+            await newsletterQueue.add(dailyJobId, { date: targetDate, type: "daily" }, { jobId: dailyJobId });
+            log.info(`Daily tech newsletter job queued [${dailyJobId}]`);
+        }
+
+        if (pipelineType === "system_design" || pipelineType === "both") {
+            const sdJobId = `newsletter-system-design-${Date.now()}`;
+            await newsletterQueue.add(sdJobId, { date: targetDate, type: "system_design" }, { jobId: sdJobId });
+            log.info(`System Design & Node.js newsletter job queued [${sdJobId}]`);
+        }
 
         // 4. Wait for newsletter generation and email sending to finish
         await waitForQueuesToDrain([newsletterQueue, emailQueue]);
@@ -184,7 +194,17 @@ async function runNewsletterPipeline(options = {}) {
     }
 }
 
+async function runDailyNewsletterPipeline(options = {}) {
+    return runNewsletterPipeline({ ...options, type: "daily" });
+}
+
+async function runSystemDesignPipeline(options = {}) {
+    return runNewsletterPipeline({ ...options, type: "system_design" });
+}
+
 module.exports = {
     runNewsIngestionPipeline,
-    runNewsletterPipeline
+    runNewsletterPipeline,
+    runDailyNewsletterPipeline,
+    runSystemDesignPipeline
 };

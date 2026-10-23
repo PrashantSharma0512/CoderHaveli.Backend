@@ -108,14 +108,15 @@ async function getStatus(req, res) {
 }
 
 /**
- * GET /api/newsletter/latest
+ * GET /api/newsletter/latest?type=daily|system_design
  * Get the most recent newsletter (public).
  */
 async function latest(req, res) {
 
     try {
 
-        const newsletter = await getLatestNewsletter();
+        const type = req.query.type;
+        const newsletter = await getLatestNewsletter(type);
 
         if (!newsletter) {
             return res.status(404).json({
@@ -142,7 +143,7 @@ async function latest(req, res) {
 }
 
 /**
- * GET /api/newsletter/history?page=1&limit=10
+ * GET /api/newsletter/history?page=1&limit=10&type=daily|system_design
  * Get paginated newsletter history (public).
  */
 async function history(req, res) {
@@ -151,8 +152,9 @@ async function history(req, res) {
 
         const page = Math.max(1, parseInt(req.query.page) || 1);
         const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 10));
+        const type = req.query.type;
 
-        const result = await getNewsletterHistory(page, limit);
+        const result = await getNewsletterHistory(page, limit, type);
 
         res.json({
             success: true,
@@ -221,20 +223,23 @@ async function getNews(req, res) {
 /**
  * POST /api/newsletter/generate (admin only)
  * Manually trigger newsletter generation.
+ * Optional body: { type: "daily" | "system_design" | "both" }
  */
 async function triggerGenerate(req, res) {
 
     try {
 
+        const type = req.body.type || req.query.type || "both";
+
         // Trigger on-demand pipeline asynchronously
         const { runNewsletterPipeline } = require("../services/pipelineRunner.service");
-        runNewsletterPipeline({ date: new Date().toISOString() }).catch(err => {
+        runNewsletterPipeline({ date: new Date().toISOString(), type }).catch(err => {
             log.error("Manual pipeline run error:", err.message);
         });
 
         res.json({
             success: true,
-            message: "Newsletter generation started (On-Demand Worker)"
+            message: `Newsletter generation started for type: ${type} (On-Demand Worker)`
         });
 
     } catch (error) {

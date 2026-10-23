@@ -36,23 +36,71 @@ async function getArticlesForNewsletter(limit = 15) {
 }
 
 /**
+ * Get articles specifically tailored for System Design & Node.js newsletter.
+ * Prioritizes System Design and Node.js categories, with fallback to technical Cloud/DevOps.
+ */
+async function getArticlesForSystemDesignNewsletter(limit = 10) {
+
+    const News = mongoose.model("News");
+
+    // 1. First priority: Articles explicitly categorized as System Design or Node.js
+    let articles = await News.find({
+        processed: true,
+        duplicate: false,
+        newsletterIncluded: false,
+        category: { $in: ["System Design", "Node.js"] }
+    })
+        .sort({ importanceScore: -1, publishedAt: -1 })
+        .limit(limit)
+        .lean();
+
+    // 2. If fewer than limit, find articles matching relevant technical keywords
+    if (articles.length < limit) {
+        const existingIds = articles.map(a => a._id);
+        const remainingLimit = limit - articles.length;
+
+        const additional = await News.find({
+            _id: { $nin: existingIds },
+            processed: true,
+            duplicate: false,
+            newsletterIncluded: false,
+            $or: [
+                { category: { $in: ["Cloud", "DevOps", "Open Source", "Web Development"] } },
+                { title: { $regex: /architecture|scale|distributed|node|redis|database|system|performance|event loop|microservice/i } }
+            ]
+        })
+            .sort({ importanceScore: -1, publishedAt: -1 })
+            .limit(remainingLimit)
+            .lean();
+
+        articles = [...articles, ...additional];
+    }
+
+    log.info(`Found ${articles.length} articles for System Design & Node.js newsletter`);
+
+    return articles;
+
+}
+
+/**
  * Create a newsletter record in the database.
  */
-async function createNewsletter({ title, date, articles, html, markdown }) {
+async function createNewsletter({ title, date, articles = [], html, markdown, type = "daily" }) {
 
     const Newsletter = mongoose.model("NewsLetter");
 
     const newsletter = await Newsletter.create({
         title,
         date,
-        articles: articles.map(a => a._id),
-        totalArticles: articles.length,
+        type,
+        articles: (articles || []).map(a => a._id).filter(Boolean),
+        totalArticles: (articles || []).length,
         html,
         markdown: markdown || "",
         status: "generated"
     });
 
-    log.success(`Newsletter created: ${newsletter._id}`);
+    log.success(`Newsletter created [${type}]: ${newsletter._id}`);
 
     return newsletter;
 
@@ -63,6 +111,8 @@ async function createNewsletter({ title, date, articles, html, markdown }) {
  * won't be picked up again.
  */
 async function markArticlesAsIncluded(articleIds) {
+
+    if (!articleIds || articleIds.length === 0) return;
 
     const News = mongoose.model("News");
 
@@ -76,13 +126,18 @@ async function markArticlesAsIncluded(articleIds) {
 }
 
 /**
- * Get the latest newsletter.
+ * Get the latest newsletter. Optionally filter by type ('daily' or 'system_design').
  */
-async function getLatestNewsletter() {
+async function getLatestNewsletter(type) {
 
     const Newsletter = mongoose.model("NewsLetter");
 
-    return Newsletter.findOne({ status: { $in: ["generated", "sent"] } })
+    const query = { status: { $in: ["generated", "sent"] } };
+    if (type) {
+        query.type = type;
+    }
+
+    return Newsletter.findOne(query)
         .sort({ createdAt: -1 })
         .populate("articles", "title source category tags importanceScore publishedAt")
         .lean();
@@ -90,22 +145,27 @@ async function getLatestNewsletter() {
 }
 
 /**
- * Get newsletter history with pagination.
+ * Get newsletter history with pagination. Optionally filter by type.
  */
-async function getNewsletterHistory(page = 1, limit = 10) {
+async function getNewsletterHistory(page = 1, limit = 10, type) {
 
     const Newsletter = mongoose.model("NewsLetter");
 
     const skip = (page - 1) * limit;
 
+    const query = { status: { $in: ["generated", "sent"] } };
+    if (type) {
+        query.type = type;
+    }
+
     const [newsletters, total] = await Promise.all([
-        Newsletter.find({ status: { $in: ["generated", "sent"] } })
+        Newsletter.find(query)
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
-            .select("title date totalArticles status sentAt createdAt")
+            .select("title date type totalArticles status sentAt createdAt")
             .lean(),
-        Newsletter.countDocuments({ status: { $in: ["generated", "sent"] } })
+        Newsletter.countDocuments(query)
     ]);
 
     return {
@@ -122,6 +182,7 @@ async function getNewsletterHistory(page = 1, limit = 10) {
 
 module.exports = {
     getArticlesForNewsletter,
+    getArticlesForSystemDesignNewsletter,
     createNewsletter,
     markArticlesAsIncluded,
     getLatestNewsletter,

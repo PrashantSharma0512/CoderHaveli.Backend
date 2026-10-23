@@ -7,6 +7,14 @@ module.exports = (mongoose) => {
                 type: Date,
                 required: true
             },
+            type: {
+                type: String,
+                enum: [
+                    "daily",
+                    "system_design"
+                ],
+                default: "daily"
+            },
             articles: [{
                 type: mongoose.Schema.Types.ObjectId,
                 ref: "News"
