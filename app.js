@@ -16,7 +16,8 @@ const app = express();
 
 const allowedOrigin = [
   "https://coderhaveli.vercel.app",
-  "http://localhost:5173"
+  "http://localhost:5173",
+  "https://coderhaveli.foodyninja.in"
 ];
 
 app.use(
