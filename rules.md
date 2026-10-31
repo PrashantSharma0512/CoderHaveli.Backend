@@ -22,7 +22,7 @@
 - **NEVER use real secrets as fallbacks**:
   ```javascript
   // ❌ STRICTLY FORBIDDEN:
-  key_secret: process.env.RAZOR_PAY_SECRET || 'HlNXvhmUJR04lH9PFk0DhSjo' // NEVER DO THIS
+  key_secret: process.env.RAZOR_PAY_SECRET || 'secret_key_12345_example' // NEVER DO THIS
   ```
 - If an environment variable is required and missing in production or runtime, throw a clear configuration error or return an appropriate error response:
   ```javascript
