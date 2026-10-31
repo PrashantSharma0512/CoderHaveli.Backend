@@ -25,7 +25,7 @@ app.use(
     origin: allowedOrigin,
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
   })
 );
 
@@ -50,8 +50,16 @@ app.use(cookieParser());
 ========================================================== */
 
 mongoConnect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected"))
-  .catch((err) => console.error(err));
+  .then(async () => {
+    console.log("✅ MongoDB Connected");
+    try {
+      const contestScheduler = require("./services/contestScheduler.service");
+      await contestScheduler.init();
+    } catch (schedErr) {
+      console.error("Contest scheduler init error:", schedErr.message);
+    }
+  })
+  .catch((err) => console.error("❌ MongoDB Connection Error:", err));
 
 require("./models")(mongoose);
 
@@ -117,6 +125,10 @@ app.use("/analytics", require("./routes/analytics"));
 
 app.use("/api/newsletter", require("./routes/newsletter"));
 
+app.use("/api/contests", require("./routes/contest"));
+
+app.use("/api/admin/contests", require("./routes/adminContest"));
+
 /* ==========================================================
     Analytics
 ========================================================== */
@@ -152,14 +164,18 @@ console.log("✅ News pipeline configured (On-Demand BullMQ Workers)");
 ========================================================= */
 
 require("./scheduler/news.cron");
+
+
 /* ==========================================================
     Server
 ========================================================== */
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+  });
+}
 
-  console.log(`🚀 Server running on port ${PORT}`);
-
-});
+module.exports = app;

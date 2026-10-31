@@ -4,7 +4,9 @@ const mongoose = require('mongoose')
 const getAllProblems = async (req, res) => {
     try {
         const Problem = mongoose.model('ProblemList');
-        const problems = await Problem.find({}, { _id: 1, quesName: 1, difficulty: 1, tags: 1 });
+        const problems = await Problem.find({}, { _id: 1, quesId: 1, quesName: 1, difficulty: 1, tags: 1 })
+            .collation({ locale: "en_US", numericOrdering: true })
+            .sort({ quesId: 1 });
         res.json(problems);
     } catch (error) {
         console.error('Error fetching problems:', error);
@@ -74,7 +76,12 @@ const getProblemById = async (req, res) => {
                         ]
                     },
                     hints: "$hints.hints",
-                    constraints: "$constraints.contraints",
+                    constraints: {
+                        $ifNull: [
+                            "$constraints.constraint",
+                            { $ifNull: ["$constraints.constraints", "$constraints.contraints"] }
+                        ]
+                    },
                     tags: 1
                 }
             }

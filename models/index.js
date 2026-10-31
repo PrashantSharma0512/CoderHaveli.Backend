@@ -20,6 +20,15 @@ const cartSchema = require('./carts.schema');
 const analyticsSchema = require('./analytics.schema');
 const newsSchema = require('./news.schema');
 const newsletterSchema = require('./newsletters.schema');
+const contestSchema = require('./contests.schema');
+const contestRegistrationSchema = require('./contestRegistrations.schema');
+const contestSubmissionSchema = require('./contestSubmissions.schema');
+const contestScoreSchema = require('./contestScores.schema');
+const contestAuditLogSchema = require('./contestAuditLogs.schema');
+const contestInvitationSchema = require('./contestInvitations.schema');
+const contestPassPlanSchema = require('./contestPassPlans.schema');
+const contestPassPurchaseSchema = require('./contestPassPurchases.schema');
+const weeklyContestConfigSchema = require('./weeklyContestConfigs.schema');
 
 module.exports = (mongoose) => {
     const User = userSchema(mongoose);
@@ -44,6 +53,15 @@ module.exports = (mongoose) => {
     const Analytics = analyticsSchema(mongoose);
     const News = newsSchema(mongoose);
     const NewsLetter = newsletterSchema(mongoose);
+    const Contest = contestSchema(mongoose);
+    const ContestRegistration = contestRegistrationSchema(mongoose);
+    const ContestSubmission = contestSubmissionSchema(mongoose);
+    const ContestScore = contestScoreSchema(mongoose);
+    const ContestAuditLog = contestAuditLogSchema(mongoose);
+    const ContestInvitation = contestInvitationSchema(mongoose);
+    const ContestPassPlan = contestPassPlanSchema(mongoose);
+    const ContestPassPurchase = contestPassPurchaseSchema(mongoose);
+    const WeeklyContestConfig = weeklyContestConfigSchema(mongoose);
 
     return {
         User,
@@ -68,9 +86,19 @@ module.exports = (mongoose) => {
         analyticsSchema: Analytics,
         NewsSchema: News,
         NewsletterSchema: NewsLetter,
+        Contest,
+        ContestRegistration,
+        ContestSubmission,
+        ContestScore,
+        ContestAuditLog,
+        ContestInvitation,
+        ContestPassPlan,
+        ContestPassPurchase,
+        WeeklyContestConfig,
 
         email: { type: String, required: true, unique: true, index: true },
         difficulty: { type: String, required: true, enum: ['easy', 'medium', 'hard'], index: true },
         status: { type: String, required: true, index: true }
     };
 };
+

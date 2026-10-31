@@ -5,7 +5,7 @@ module.exports = (mongoose) => {
             quesId: { type: String, required: true, index: true },
             quesName: { type: String, required: true },
             quesDesc: { type: String, required: true },
-            difficulty: { type: String, required: true, enum: ['Easy', 'Medium', 'Hard'] },
+            difficulty: { type: String, required: true, enum: ['Easy', 'Medium', 'Hard', 'easy', 'medium', 'hard'] },
             Constraints: { type: mongoose.Schema.Types.ObjectId, ref: 'Constraints' },
             tags: [{ type: String, default: null }],
             createdAt: { type: Date, default: Date.now },

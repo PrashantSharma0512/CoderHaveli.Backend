@@ -198,9 +198,9 @@ const getCourseData = async (req, res) => {
         const courseData = await Course.aggregate([
             {
                 $match: {
-                    type: "course",
                     _id: { $nin: excludeCourseIds },
                     isDeleted: false,
+                    type: "course",
                 },
             },
             {
@@ -464,7 +464,12 @@ const getProblemData = async (req, res) => {
                     exampleInput: '$exampleData.input',
                     exampleOutput: '$exampleData.output',
                     exampleExplanation: '$exampleData.explaination',
-                    constraints: '$constraintsData.contraints',
+                    constraints: {
+                        $ifNull: [
+                            '$constraintsData.constraint',
+                            { $ifNull: ['$constraintsData.constraints', '$constraintsData.contraints'] }
+                        ]
+                    },
                     createdAt: 1,
                     modifiedAt: 1
                 }

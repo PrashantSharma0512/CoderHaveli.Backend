@@ -12,6 +12,7 @@
 
 const ai = require("../configs/gemini.config");
 const createLogger = require("../utils/logger");
+const { enhanceHtmlWithResponsiveDiagrams } = require("../utils/responsiveDiagram");
 
 const log = createLogger("ai");
 
@@ -618,17 +619,9 @@ HTML EMAIL GUIDELINES:
 
             const parsed = JSON.parse(text);
 
-
             return {
-
-                html: parsed.html || "",
-
-                articles: Array.isArray(
-                    parsed.articles
-                )
-                    ? parsed.articles
-                    : []
-
+                html: enhanceHtmlWithResponsiveDiagrams(parsed.html || ""),
+                articles: Array.isArray(parsed.articles) ? parsed.articles : []
             };
 
         } catch (jsonErr) {
@@ -647,13 +640,9 @@ HTML EMAIL GUIDELINES:
                     "Gemini returned raw HTML instead of JSON — using text as HTML"
                 );
 
-
                 return {
-
-                    html: text,
-
+                    html: enhanceHtmlWithResponsiveDiagrams(text),
                     articles: []
-
                 };
 
             }
@@ -771,29 +760,84 @@ Generate an exhaustive, highly detailed, production-grade technical newsletter e
 
 CRITICAL REQUIREMENTS:
 
-1. MANDATORY ASCII DIAGRAMS (MUST INCLUDE AT LEAST TWO VISUAL ASCII SCHEMATICS):
-   Every diagram MUST be rendered inside a styled <pre> tag with white-space: pre; font-family: monospace so characters never wrap:
-   - DIAGRAM 1 (System Design Architecture Topology):
-     A multi-tier ASCII box diagram showing how components interact (e.g. Clients -> Load Balancer -> Node.js Cluster -> Redis/Cache Cluster -> Database Master/Replica). Use clean box-drawing characters:
-     ┌───────────┐        ┌─────────────────┐        ┌──────────────────┐
-     │  Clients  │ ─────> │  Load Balancer  │ ─────> │   API Gateway    │
-     └───────────┘        └─────────────────┘        └─────────┬────────┘
-                                                               │
-                                                               ▼
-                                                      ...multi-tier flow...
-   - DIAGRAM 2 (Node.js Execution & Memory / State Flow):
-     A dedicated ASCII diagram explaining the Node.js internal flow (e.g., Call Stack -> Microtask Queue -> Libuv Thread Pool -> Event Loop Tick Phases, or Stream Buffer HighWaterMark backpressure flow).
+1. MANDATORY RESPONSIVE HTML ARCHITECTURE DIAGRAMS (100% MOBILE-FIRST SCHEMATICS):
+   CRITICAL REQUIREMENT: Over 75% of engineers read this newsletter on mobile phones (360px - 414px width).
+   DO NOT rely solely on wide, horizontal ASCII art in <pre> tags which overflows or breaks on phone screens.
+   You MUST generate 100% RESPONSIVE HTML ARCHITECTURE SCHEMATICS using mobile-safe HTML tables and styled card nodes with directional arrows (↓) and protocol badges.
 
-   Render every ASCII diagram inside this exact HTML element:
-   <pre style="background: #FFFDF7; border: 1px solid #E8D79A; border-left: 4px solid #D4AF37; border-radius: 6px; padding: 14px 16px; font-family: 'Consolas', 'Courier New', monospace; font-size: 11.5px; line-height: 1.35; color: #5a4000; overflow-x: auto; white-space: pre; margin: 14px 0;">
-...YOUR MULTI-TIER ASCII ART...
-   </pre>
+   EVERY DIAGRAM MUST USE THIS EXACT RESPONSIVE HTML PATTERN:
+   <div style="background: #FFFDF7; border: 1px solid #E8D79A; border-radius: 8px; padding: 14px; margin: 16px 0; box-shadow: 0 1px 4px rgba(212,175,55,0.08); max-width: 100%; box-sizing: border-box;">
+     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 12px; border-collapse: collapse;">
+       <tr>
+         <td align="left">
+           <span style="font-family: 'Consolas', 'Courier New', monospace; font-size: 11px; font-weight: 700; color: #A67C00; text-transform: uppercase; letter-spacing: 0.5px;">
+             📊 [DIAGRAM TITLE, e.g. ARCHITECTURAL TOPOLOGY SCHEMATIC]
+           </span>
+         </td>
+         <td align="right">
+           <span style="background: #FFF9E8; border: 1px solid #E8D79A; border-radius: 12px; padding: 2px 8px; font-size: 9.5px; font-family: -apple-system, sans-serif; font-weight: 600; color: #8A8170; display: inline-block;">
+             📱 Mobile Responsive
+           </span>
+         </td>
+       </tr>
+     </table>
+
+     <!-- Tier Card Node -->
+     <div style="background: #FFFFFF; border: 1.5px solid #E8D79A; border-left: 4px solid #D4AF37; border-radius: 6px; padding: 10px 14px; margin-bottom: 0;">
+       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">
+         <tr>
+           <td align="left" style="font-family: 'Consolas', monospace; font-size: 11px; font-weight: 700; color: #A67C00;">[ TIER NAME ]</td>
+           <td align="right"><span style="background: #FFF9E8; color: #A67C00; border: 1px solid #E8D79A; border-radius: 10px; padding: 1px 7px; font-size: 9.5px; font-family: monospace; font-weight: 700;">PROTOCOL/TECH</span></td>
+         </tr>
+         <tr><td colspan="2" style="padding-top: 4px; font-family: -apple-system, sans-serif; font-size: 13px; font-weight: 700; color: #222222; line-height: 1.3;">Primary Component Name</td></tr>
+         <tr><td colspan="2" style="padding-top: 3px; font-family: -apple-system, sans-serif; font-size: 11.5px; color: #555555; line-height: 1.45;">Key mechanics, throughput SLA, and latency guarantees</td></tr>
+       </table>
+     </div>
+
+     <!-- Directional Flow Connector -->
+     <div style="text-align: center; padding: 5px 0;">
+       <div style="display: inline-block; padding: 2px 10px; background: #FFF9E8; border: 1px dashed #D4AF37; border-radius: 12px; font-family: 'Consolas', monospace; font-size: 10px; font-weight: 700; color: #A67C00;">
+         ↓ [ Routing / Transport Annotation • Latency Budget ]
+       </div>
+     </div>
+
+     <!-- For Branching Logic (e.g. Cache Hit vs Miss, Fast vs Slow path): -->
+     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; margin-top: 2px;">
+       <tr>
+         <td width="48%" valign="top" style="padding-right: 4px;">
+           <div style="background: #F0FDF4; border: 1.5px solid #BBF7D0; border-left: 3.5px solid #16A34A; border-radius: 6px; padding: 9px 11px;">
+             <div style="font-family: 'Consolas', monospace; font-size: 9.5px; font-weight: 700; color: #166534;">[ BRANCH A: FAST PATH ]</div>
+             <div style="font-family: -apple-system, sans-serif; font-size: 12px; font-weight: 700; color: #14532D; margin-top: 3px;">Component Name</div>
+             <div style="font-size: 11px; color: #15803D; margin-top: 2px; line-height: 1.35;">Latency &amp; result explanation</div>
+           </div>
+         </td>
+         <td width="48%" valign="top" style="padding-left: 4px;">
+           <div style="background: #FFFDF7; border: 1.5px solid #FED7AA; border-left: 3.5px solid #EA580C; border-radius: 6px; padding: 9px 11px;">
+             <div style="font-family: 'Consolas', monospace; font-size: 9.5px; font-weight: 700; color: #9A3412;">[ BRANCH B: SLOW PATH ]</div>
+             <div style="font-family: -apple-system, sans-serif; font-size: 12px; font-weight: 700; color: #7C2D12; margin-top: 3px;">Component Name</div>
+             <div style="font-size: 11px; color: #C2410C; margin-top: 2px; line-height: 1.35;">Latency &amp; failover explanation</div>
+           </div>
+         </td>
+       </tr>
+     </table>
+
+     <!-- (Optional) Collapsible Monospace Terminal ASCII Schematic -->
+     <details style="margin-top: 12px; font-family: 'Consolas', monospace; font-size: 11px; color: #8A8170;">
+       <summary style="cursor: pointer; font-size: 10.5px; color: #A67C00; font-weight: 600; padding: 4px 0;">▶ View Terminal Monospace ASCII Blueprint</summary>
+       <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 6px;">
+         <pre style="background: #FFFFFF; border: 1px solid #E8D79A; border-radius: 4px; padding: 8px 10px; font-size: 10px; line-height: 1.3; color: #5a4000; margin: 0; white-space: pre; font-family: 'Consolas', monospace;">...ASCII...</pre>
+       </div>
+     </details>
+   </div>
+
+   - DIAGRAM 1: Responsive System Architecture Topology (Client Ingress -> Edge/ALB -> Node.js Cluster -> Redis/Queue -> DB Replication).
+   - DIAGRAM 2: Responsive Node.js Execution & Engine Pipeline (V8 Call Stack -> Microtask Queue -> Libuv Event Loop Phases -> Worker Threads).
 
 2. SECTION 1: ARCHITECTURAL BLUEPRINT (IN-DEPTH SYSTEM DESIGN BREAKDOWN)
    - Title: "${curatedTopic ? curatedTopic.title : "Architectural Blueprint"}"
    - Concrete Scale & Traffic SLAs: Define throughput (e.g., 50,000–100,000 RPS), Latency budgets (P99 < 15ms), and availability target (99.99%).
    - Deep Technical Explanation: Explain how components communicate, network protocols used (HTTP/2, gRPC, TCP sockets), and serialization tradeoffs (JSON vs Protocol Buffers).
-   - Insert ASCII DIAGRAM 1 (Architecture Topology).
+   - Insert RESPONSIVE HTML DIAGRAM 1 (Architecture Topology Schematic - mobile responsive HTML cards and connectors).
    - Step-by-Step Request Flow: Numbered breakdown (Steps 1 to 5) tracking a request through every hop.
    - Distributed Edge Cases & Failure Mitigation: What happens during network partitions, split-brain, cache stampedes, or primary failover.
    - CAP Theorem & Tradeoffs: Explicit breakdown of Consistency vs Availability choices made.
@@ -802,10 +846,12 @@ CRITICAL REQUIREMENTS:
 3. SECTION 2: NODE.JS INTERNALS & PRODUCTION PATTERNS (IN-DEPTH ENGINEERING)
    - Title: "Node.js Under the Hood: ${curatedTopic ? curatedTopic.nodeJsFocus : "Core Internals"}"
    - Engine-Level Mechanics: Deep technical dive into how V8, Libuv C++ event loop, POSIX threads, and memory heaps handle this mechanism.
-   - Insert ASCII DIAGRAM 2 (Node.js Internal State / Execution Flow).
+   - Insert RESPONSIVE HTML DIAGRAM 2 (Node.js Execution & Engine Pipeline - mobile responsive HTML cards and connectors).
    - Production-Grade Code Snippet: Full, realistic JavaScript/Node.js implementation with thorough comments, error handling, and clean async/await or streams/ioredis patterns.
      Wrap in:
-     <pre style="background: #FFFDF7; border: 1px solid #E8D79A; border-left: 4px solid #D4AF37; border-radius: 6px; padding: 14px; font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; line-height: 1.5; color: #222222; overflow-x: auto; white-space: pre; margin: 12px 0;">...CODE...</pre>
+     <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 12px 0; max-width: 100%;">
+       <pre style="background: #FFFDF7; border: 1px solid #E8D79A; border-left: 4px solid #D4AF37; border-radius: 6px; padding: 14px; font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; line-height: 1.5; color: #222222; overflow-x: auto; white-space: pre; margin: 0;">...CODE...</pre>
+     </div>
    - Production Gotchas & Anti-Patterns: 3 concrete pitfalls to avoid in high-scale production.
 
 4. SECTION 3: CURATED ENGINEERING READS OR INTERVIEW CHALLENGE
@@ -826,7 +872,7 @@ HTML EMAIL STYLING RULES:
 - Gold accents: Primary #D4AF37, Accent #A67C00, Soft background #FFF9E8, Border #E8D79A.
 - Font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif.
 - All links must use target="_blank".
-- ALL ASCII diagrams and Code snippets MUST have white-space: pre; so layout is preserved!
+- ALL Diagrams MUST use responsive HTML card flows. Code snippets must have overflow-x: auto; -webkit-overflow-scrolling: touch; so mobile users have a smooth experience!
 
 STRICT JSON OUTPUT FORMAT:
 Return ONLY valid JSON (no markdown wrappers, no code fences, no commentary) matching this schema:
@@ -859,7 +905,7 @@ Return ONLY valid JSON (no markdown wrappers, no code fences, no commentary) mat
 
             return {
                 title: parsed.title || `CoderHaveli Engineering — System Design & Node.js (${today})`,
-                html: parsed.html || "",
+                html: enhanceHtmlWithResponsiveDiagrams(parsed.html || ""),
                 articles: Array.isArray(parsed.articles) ? parsed.articles : []
             };
         } catch (jsonErr) {
@@ -867,7 +913,7 @@ Return ONLY valid JSON (no markdown wrappers, no code fences, no commentary) mat
                 log.warn("Gemini returned raw HTML instead of JSON for system design newsletter — using text as HTML");
                 return {
                     title: `CoderHaveli Engineering — System Design & Node.js (${today})`,
-                    html: text,
+                    html: enhanceHtmlWithResponsiveDiagrams(text),
                     articles: []
                 };
             }
