@@ -17,6 +17,7 @@ const app = express();
 const allowedOrigin = [
   "https://coderhaveli.vercel.app",
   "http://localhost:5173",
+  "http://localhost:3001",
   "https://coderhaveli.foodyninja.in"
 ];
 
@@ -178,4 +179,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = app;
+module.exports = app;

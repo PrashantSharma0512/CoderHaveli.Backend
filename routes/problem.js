@@ -6,7 +6,8 @@ const publicAuth = require('../middlewares/publicAuth');
 
 
 // routes for get problem data for ui
-router.get('/problem', Problem.getAllProblems)
+router.get('/problem', Problem.getAllProblems);
+router.get('/problem/topics', Problem.getProblemTopics);
 router.get('/problem/get-problem-by-id', Authenicated, AnalyticsMiddleware, Problem.getProblemById);
 
 router.get('/problem/get-editorial/:id', Authenicated, Problem.getEditorialById);

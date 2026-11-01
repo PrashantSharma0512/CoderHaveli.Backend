@@ -549,17 +549,16 @@ contestController.getContestProblem = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Problem definition not found' });
         }
 
-        // Fetch sample testcases (first 3)
-        const sampleTestcases = await TestCase.find({ quesId: problem.quesId }, { input: 1, output: 1, explaination: 1 })
-            .limit(3)
-            .lean();
-
-        // Fetch constraints and hints
-        const [constraintsDoc, hintsDoc, starterCodes] = await Promise.all([
-            Constraints.findOne({ quesId: problem.quesId }),
-            Hint.findOne({ quesId: problem.quesId }),
-            StarterCode.find({ quesId: problem.quesId })
-        ]);
+        // Use embedded denormalized fields if available (eliminates 4 extra queries)
+        let sampleTestcases = (Array.isArray(problem.examples) && problem.examples.length > 0)
+            ? problem.examples.slice(0, 3)
+            : null;
+        let constraintsList = (Array.isArray(problem.constraints) && problem.constraints.length > 0)
+            ? problem.constraints
+            : null;
+        let hintsList = (Array.isArray(problem.hints) && problem.hints.length > 0)
+            ? problem.hints
+            : null;
 
         // Build starter code map
         const starterCodeMap = {
@@ -569,9 +568,32 @@ contestController.getContestProblem = async (req, res) => {
             java: 'import java.util.*;\n\npublic class Solution {\n    public static void main(String[] args) {\n        // Write your Java code here\n    }\n}\n'
         };
 
-        for (const sc of starterCodes) {
-            if (sc.language && sc.code) {
-                starterCodeMap[sc.language.toLowerCase()] = sc.code;
+        if (problem.starterCodes) {
+            for (const lang of ['javascript', 'python', 'cpp', 'java']) {
+                if (problem.starterCodes[lang]) {
+                    starterCodeMap[lang] = problem.starterCodes[lang];
+                }
+            }
+        }
+
+        // Pre-migration safety fallback only if embedded fields are missing
+        if (!sampleTestcases || !constraintsList || !hintsList) {
+            const [cDoc, hDoc, fallbackTc, fallbackSc] = await Promise.all([
+                !constraintsList ? Constraints.findOne({ quesId: problem.quesId }) : null,
+                !hintsList ? Hint.findOne({ quesId: problem.quesId }) : null,
+                !sampleTestcases ? TestCase.find({ quesId: problem.quesId }, { input: 1, output: 1, explaination: 1 }).limit(3).lean() : null,
+                (!problem.starterCodes || Object.values(problem.starterCodes).every(v => !v)) ? StarterCode.find({ quesId: problem.quesId }) : null
+            ]);
+
+            if (!sampleTestcases && fallbackTc) sampleTestcases = fallbackTc;
+            if (!constraintsList && cDoc) constraintsList = cDoc.constraint || cDoc.constraints || [];
+            if (!hintsList && hDoc) hintsList = hDoc.hints || [];
+            if (fallbackSc && Array.isArray(fallbackSc)) {
+                for (const sc of fallbackSc) {
+                    if (sc.language && sc.code) {
+                        starterCodeMap[sc.language.toLowerCase()] = sc.code;
+                    }
+                }
             }
         }
 
@@ -586,8 +608,8 @@ contestController.getContestProblem = async (req, res) => {
                 points: contestProblem.points,
                 order: contestProblem.order,
                 tags: problem.tags,
-                constraints: constraintsDoc?.constraint || [],
-                hints: hintsDoc?.hints || [],
+                constraints: constraintsList || [],
+                hints: hintsList || [],
                 sampleTestCases: sampleTestcases,
                 starterCodes: starterCodeMap,
                 allowedLanguages: contest.allowedLanguages || ['javascript', 'python', 'cpp', 'java']

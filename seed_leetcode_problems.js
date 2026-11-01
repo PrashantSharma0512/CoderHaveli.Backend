@@ -223,30 +223,6 @@ async function seedLeetCodeProblems() {
                 }
             });
 
-            // ProblemList
-            problemOps.push({
-                updateOne: {
-                    filter: { quesId },
-                    update: {
-                        $set: {
-                            quesId,
-                            quesName: title,
-                            quesDesc: desc,
-                            difficulty,
-                            tags,
-                            Constraints: constraintId,
-                            constraints: constraintId,
-                            languages: ['javascript', 'python', 'java', 'cpp'],
-                            modifiedAt: new Date()
-                        },
-                        $setOnInsert: {
-                            createdAt: new Date()
-                        }
-                    },
-                    upsert: true
-                }
-            });
-
             // Examples & Test cases
             const examples = parseExamples(q.description, title);
             for (const ex of examples) {
@@ -263,7 +239,14 @@ async function seedLeetCodeProblems() {
             // Starter Code
             const params = extractParams(examples.length > 0 ? examples[0].input : '');
             const starters = generateStarterCodes(title, params);
+            const starterCodesMap = {
+                javascript: '',
+                python: '',
+                java: '',
+                cpp: ''
+            };
             for (const sc of starters) {
+                starterCodesMap[sc.language] = sc.code;
                 starterCodeOps.push({
                     updateOne: {
                         filter: { quesId, language: sc.language },
@@ -296,6 +279,32 @@ async function seedLeetCodeProblems() {
                         $set: {
                             quesId,
                             hints,
+                            modifiedAt: new Date()
+                        },
+                        $setOnInsert: {
+                            createdAt: new Date()
+                        }
+                    },
+                    upsert: true
+                }
+            });
+
+            // ProblemList (fully denormalized with embedded fields)
+            problemOps.push({
+                updateOne: {
+                    filter: { quesId },
+                    update: {
+                        $set: {
+                            quesId,
+                            quesName: title,
+                            quesDesc: desc,
+                            difficulty,
+                            tags,
+                            constraints: constraintsList,
+                            hints: hints,
+                            starterCodes: starterCodesMap,
+                            examples: examples.slice(0, 3),
+                            languages: ['javascript', 'python', 'java', 'cpp'],
                             modifiedAt: new Date()
                         },
                         $setOnInsert: {

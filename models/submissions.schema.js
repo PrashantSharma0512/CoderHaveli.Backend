@@ -3,7 +3,8 @@ module.exports = (mongoose) => {
         'Submission',
         new mongoose.Schema({
             quesId: { type: String, required: true },
-            code: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Code' },
+            code: { type: mongoose.Schema.Types.Mixed, default: null }, // Supports either ObjectId (legacy) or code string
+            sourceCode: { type: String, default: '' }, // Direct embedded source code to eliminate Code table joins
             codelanguage: { type: String, required: true },
             userId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
             status: {
