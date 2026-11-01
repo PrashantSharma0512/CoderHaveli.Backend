@@ -6,7 +6,6 @@ const categorySchema = require('./categories.schema');
 const codeSchema = require('./codes.schema');
 const testcaseSchema = require('./testcases.schema');
 const problemlistSchema = require('./problemlists.schema');
-const constraintsSchema = require('./constraints.schema');
 const hintSchema = require('./hints.schema');
 const submissionSchema = require('./submissions.schema');
 const approachesSchema = require('./approaches.schema');
@@ -39,7 +38,6 @@ module.exports = (mongoose) => {
     const Code = codeSchema(mongoose);
     const TestCase = testcaseSchema(mongoose);
     const ProblemList = problemlistSchema(mongoose);
-    const Constraints = constraintsSchema(mongoose);
     const Hint = hintSchema(mongoose);
     const Submission = submissionSchema(mongoose);
     const Approaches = approachesSchema(mongoose);
@@ -72,7 +70,6 @@ module.exports = (mongoose) => {
         Code,
         TestCase,
         ProblemList,
-        Constraints,
         hint: Hint,
         Submissions: Submission,
         Approaches,

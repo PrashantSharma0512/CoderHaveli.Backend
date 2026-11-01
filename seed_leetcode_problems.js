@@ -155,7 +155,6 @@ async function seedLeetCodeProblems() {
 
     const ProblemList = mongoose.model('ProblemList');
     const TestCase = mongoose.model('TestCase');
-    const Constraints = mongoose.model('Constraints');
     const StarterCode = mongoose.model('StarterCode');
     const Hint = mongoose.model('Hint');
 
@@ -172,7 +171,6 @@ async function seedLeetCodeProblems() {
         const batch = validQuestions.slice(i, i + BATCH_SIZE);
         const batchQuesIds = batch.map(q => String(q.id));
 
-        const constraintOps = [];
         const problemOps = [];
         const starterCodeOps = [];
         const hintOps = [];
@@ -192,7 +190,7 @@ async function seedLeetCodeProblems() {
 <p>For more details, check out the official LeetCode link: <a href="${q.question_link || 'https://leetcode.com'}" target="_blank" rel="noopener noreferrer">${title} on LeetCode</a>.</p>`;
             }
 
-            // Constraints
+            // Constraints (embedded into ProblemList)
             let constraintsList = parseConstraints(desc);
             if (!constraintsList || constraintsList.length === 0) {
                 constraintsList = [
@@ -201,27 +199,6 @@ async function seedLeetCodeProblems() {
                     'Time limit: 1000ms | Memory limit: 256MB'
                 ];
             }
-
-            const constraintId = new mongoose.Types.ObjectId();
-            constraintOps.push({
-                updateOne: {
-                    filter: { quesId },
-                    update: {
-                        $set: {
-                            quesId,
-                            constraint: constraintsList,
-                            constraints: constraintsList,
-                            contraints: constraintsList,
-                            modifiedAt: new Date()
-                        },
-                        $setOnInsert: {
-                            _id: constraintId,
-                            createdAt: new Date()
-                        }
-                    },
-                    upsert: true
-                }
-            });
 
             // Examples & Test cases
             const examples = parseExamples(q.description, title);
@@ -318,7 +295,6 @@ async function seedLeetCodeProblems() {
 
         // Execute batch DB operations in parallel
         await Promise.all([
-            Constraints.bulkWrite(constraintOps, { ordered: false }),
             ProblemList.bulkWrite(problemOps, { ordered: false }),
             StarterCode.bulkWrite(starterCodeOps, { ordered: false }),
             Hint.bulkWrite(hintOps, { ordered: false }),
@@ -341,7 +317,6 @@ async function seedLeetCodeProblems() {
     const finalProblemCount = await ProblemList.countDocuments();
     const finalTestCaseCount = await TestCase.countDocuments();
     const finalStarterCodeCount = await StarterCode.countDocuments();
-    const finalConstraintsCount = await Constraints.countDocuments();
     const finalHintCount = await Hint.countDocuments();
 
     const totalDuration = ((Date.now() - startTime) / 1000).toFixed(2);
@@ -353,7 +328,6 @@ async function seedLeetCodeProblems() {
     console.log(`   - Problems in ProblemList: ${finalProblemCount}`);
     console.log(`   - Test Cases in TestCase: ${finalTestCaseCount}`);
     console.log(`   - Starter Codes in StarterCode: ${finalStarterCodeCount}`);
-    console.log(`   - Constraints in Constraints: ${finalConstraintsCount}`);
     console.log(`   - Hints in Hint: ${finalHintCount}`);
     console.log('======================================================\n');
 

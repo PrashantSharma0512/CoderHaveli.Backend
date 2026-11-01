@@ -153,20 +153,15 @@ const getProblemById = async (req, res) => {
             : [];
 
         // Pre-migration safety fallback
-        if ((!constraints || constraints.length === 0) || (!hints || hints.length === 0) || (!examples || examples.length === 0)) {
-            const Constraints = mongoose.model('Constraints');
+        if ((!hints || hints.length === 0) || (!examples || examples.length === 0)) {
             const Hint = mongoose.model('Hint');
             const TestCase = mongoose.model('TestCase');
 
-            const [cDoc, hDoc, tcDocs] = await Promise.all([
-                (!constraints || constraints.length === 0) ? Constraints.findOne({ quesId: problem.quesId }).lean() : null,
+            const [hDoc, tcDocs] = await Promise.all([
                 (!hints || hints.length === 0) ? Hint.findOne({ quesId: problem.quesId }).lean() : null,
                 (!examples || examples.length === 0) ? TestCase.find({ quesId: problem.quesId }, { input: 1, output: 1, explaination: 1 }).limit(3).lean() : null
             ]);
 
-            if ((!constraints || constraints.length === 0) && cDoc) {
-                constraints = cDoc.constraint || cDoc.constraints || cDoc.contraints || [];
-            }
             if ((!hints || hints.length === 0) && hDoc) {
                 hints = hDoc.hints || [];
             }
@@ -678,21 +673,6 @@ const addQuestion = async (req, res) => {
         const TestCase = mongoose.model('TestCase');
         const Hint = mongoose.model('Hint');
         const StarterCode = mongoose.model('StarterCode');
-        const Constraints = mongoose.model('Constraints');
-
-        const constraintResult = await Constraints.findOneAndUpdate(
-            { quesId: quesId },
-            {
-                $set: {
-                    quesId: quesId,
-                    constraints: constraints,
-                    createdAt: new Date(),
-                }
-            },
-            {
-                upsert: true, new: true
-            }
-        )
         const starterCodesObj = {
             javascript: (code && code.javascript) || '',
             python: (code && code.python) || '',

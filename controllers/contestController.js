@@ -477,7 +477,6 @@ contestController.getContestProblem = async (req, res) => {
         const ProblemList = mongoose.model('ProblemList');
         const TestCase = mongoose.model('TestCase');
         const StarterCode = mongoose.model('StarterCode');
-        const Constraints = mongoose.model('Constraints');
         const Hint = mongoose.model('Hint');
 
         const { contestId, problemId } = req.params;
@@ -555,7 +554,7 @@ contestController.getContestProblem = async (req, res) => {
             : null;
         let constraintsList = (Array.isArray(problem.constraints) && problem.constraints.length > 0)
             ? problem.constraints
-            : null;
+            : [];
         let hintsList = (Array.isArray(problem.hints) && problem.hints.length > 0)
             ? problem.hints
             : null;
@@ -577,16 +576,14 @@ contestController.getContestProblem = async (req, res) => {
         }
 
         // Pre-migration safety fallback only if embedded fields are missing
-        if (!sampleTestcases || !constraintsList || !hintsList) {
-            const [cDoc, hDoc, fallbackTc, fallbackSc] = await Promise.all([
-                !constraintsList ? Constraints.findOne({ quesId: problem.quesId }) : null,
+        if (!sampleTestcases || !hintsList) {
+            const [hDoc, fallbackTc, fallbackSc] = await Promise.all([
                 !hintsList ? Hint.findOne({ quesId: problem.quesId }) : null,
                 !sampleTestcases ? TestCase.find({ quesId: problem.quesId }, { input: 1, output: 1, explaination: 1 }).limit(3).lean() : null,
                 (!problem.starterCodes || Object.values(problem.starterCodes).every(v => !v)) ? StarterCode.find({ quesId: problem.quesId }) : null
             ]);
 
             if (!sampleTestcases && fallbackTc) sampleTestcases = fallbackTc;
-            if (!constraintsList && cDoc) constraintsList = cDoc.constraint || cDoc.constraints || [];
             if (!hintsList && hDoc) hintsList = hDoc.hints || [];
             if (fallbackSc && Array.isArray(fallbackSc)) {
                 for (const sc of fallbackSc) {
