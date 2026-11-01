@@ -517,16 +517,22 @@ const getCategoryData = async (req, res) => {
 
 const detailedTutorialOrCourse = async (req, res) => {
     try {
-        const Course = mongoose.model('Course')
+        const Course = mongoose.model('Course');
         const { id, type } = req.query;
 
         if (!id) {
-            throw new Error("id is required")
+            return res.status(400).json({ message: "id is required" });
         }
-        const detailedTutorialData = await Course.findOne({
-            _id: new mongoose.Types.ObjectId(id),
-            type: type
-        })
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "Invalid id format" });
+        }
+
+        let query = { _id: new mongoose.Types.ObjectId(id) };
+        if (type) {
+            query.type = type;
+        }
+
+        let detailedTutorialData = await Course.findOne(query)
             .populate("image", "url -_id")
             .populate("category", "name -_id")
             .populate({
@@ -536,11 +542,31 @@ const detailedTutorialOrCourse = async (req, res) => {
                     path: "image",
                     select: "url -_id"
                 }
-            })
+            });
 
-        res.json(detailedTutorialData)
+        // Fallback: If not found with type, search by ID alone
+        if (!detailedTutorialData && type) {
+            detailedTutorialData = await Course.findById(id)
+                .populate("image", "url -_id")
+                .populate("category", "name -_id")
+                .populate({
+                    path: "instructor",
+                    select: "-email",
+                    populate: {
+                        path: "image",
+                        select: "url -_id"
+                    }
+                });
+        }
+
+        if (!detailedTutorialData) {
+            return res.status(404).json({ message: "Course or tutorial not found" });
+        }
+
+        res.json(detailedTutorialData);
     } catch (error) {
         console.error("error while fetching detailed courses", error);
+        res.status(500).json({ message: "Internal server error" });
     }
 }
 

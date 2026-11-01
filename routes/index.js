@@ -14,7 +14,7 @@ router.put('/update-profile', Authenicated, AnalyticsMiddleware, index.updatePro
 router.get('/get-instructor', Authenicated, index.getInstructorData);
 router.get('/get-category', Authenicated, index.getCategoryData);
 router.get('/get-problem', Authenicated, AnalyticsMiddleware, index.getProblemData);
-router.get('/get-detailed-tutorial', Authenicated, AnalyticsMiddleware, index.detailedTutorialOrCourse);
+router.get('/get-detailed-tutorial', publicAuth, AnalyticsMiddleware, index.detailedTutorialOrCourse);
 router.post('/enroll-now', Authenicated, AnalyticsMiddleware, index.enrollNow)
 router.post('/cancel-subscription', Authenicated, AnalyticsMiddleware, index.cancelSubscription)
 router.get('/get-user-course', Authenicated, index.userCourse)
