@@ -1,5 +1,6 @@
 const problemController = {}
 const axios = require('axios')
+const codeDriver = require('../services/codeDriver.service')
 const mongoose = require('mongoose')
 const getAllProblems = async (req, res) => {
     try {
@@ -253,18 +254,22 @@ const run = async (req, res) => {
             },
             timeout: 25000, // 25 seconds timeout (Render free tier has 90s limit)
         };
+        const executableCode = codeDriver.wrap(code, lang);
         const response = await axios.post(
             `${compilerUrl}/api/batch`,
             {
                 language: lang,
-                code: code,
+                code: executableCode,
                 testcases: testcases
             },
             config
         );
 
 
-        return res.json(response.data);
+        return res.json({
+            ...response.data,
+            code
+        });
 
     } catch (err) {
         console.error('Compiler service error:', err);
@@ -324,12 +329,13 @@ const submit = async (req, res) => {
         const compilerUrl = process.env.COMPILER;
         const config = {
             headers: { 'Content-Type': 'application/json' },
-            timeout: 250000,
+            timeout: 30000,
         };
 
+        const executableCode = codeDriver.wrap(code, lang);
         const response = await axios.post(
             `${compilerUrl}/api/batch`,
-            { language: lang, code, testcases },
+            { language: lang, code: executableCode, testcases },
             config
         );
 
@@ -364,6 +370,7 @@ const submit = async (req, res) => {
 
         return res.json({
             ...response.data,
+            code,
             submissionId: savedSubmission._id,
             codeId: savedCode._id
         });
@@ -472,28 +479,19 @@ const getStarterCode = async (req, res) => {
 
         // Fallback to StarterCode collection
         const StarterCode = mongoose.model('StarterCode');
-        const skeleton = await StarterCode.aggregate([
-            {
-                $match: {
-                    quesId: quesId,
-                    language: langKey
-                }
-            },
-            {
-                $project: {
-                    code: 1,
-                    _id: 0
-                }
-            }
-        ]);
-
-        if (!skeleton || skeleton.length === 0) {
-            return res.status(404).json({
-                error: "Starter code not found for the given quesId and language."
-            });
+        const skeleton = await StarterCode.findOne({ quesId, language: langKey }).lean();
+        if (skeleton?.code) {
+            return res.status(200).json({ code: skeleton.code });
         }
 
-        return res.status(200).json(skeleton[0]);
+        // Dynamic fallback generation
+        const generatedCode = codeDriver.generateStarterCode(problem?.quesName || quesId, langKey);
+        ProblemList.updateOne(
+            { quesId },
+            { $set: { [`starterCodes.${langKey}`]: generatedCode } }
+        ).catch(() => {});
+
+        return res.status(200).json({ code: generatedCode });
     } catch (error) {
         console.error("Error getting starter code:", error);
         return res.status(500).json({
@@ -721,21 +719,18 @@ const addQuestion = async (req, res) => {
                 upsert: true, new: true
             }
         );
-        testcases.map(async testcase => {
-            await TestCase.findOneAndUpdate(
-                { quesId: quesId },
-                {
-                    $set: {
-                        quesId: quesId,
-                        input: testcase.input,
-                        output: testcase.output,
-                        explaination: testcase.explaination,
-                        memoryLimit: testcase.memoryLimit,
-                        timeLimit: testcase.timeLimit
-                    }
-                }
-            )
-        })
+                await TestCase.deleteMany({ quesId: quesId });
+        if (Array.isArray(testcases) && testcases.length > 0) {
+            const tcDocs = testcases.map(tc => ({
+                quesId: quesId,
+                input: tc.input || '',
+                output: tc.output || '',
+                explaination: tc.explaination || '',
+                memoryLimit: tc.memoryLimit || 256,
+                timeLimit: tc.timeLimit || 1000
+            }));
+            await TestCase.insertMany(tcDocs);
+        }
         for (const [language, starterCode] of Object.entries(code)) {
             await StarterCode.findOneAndUpdate(
                 { quesId: quesId, language: language },

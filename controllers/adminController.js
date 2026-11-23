@@ -95,14 +95,6 @@ adminController.Questions = async (req, res) => {
                 $sort: { quesIdNum: 1 }
             },
             {
-                $lookup: {
-                    from: "startercodes",
-                    localField: "quesId",
-                    foreignField: "quesId",
-                    as: "codes"
-                }
-            },
-            {
                 $project: {
                     _id: 0,
                     quesId: 1,
@@ -113,12 +105,11 @@ adminController.Questions = async (req, res) => {
                     problemExample: 1,
                     constraints: 1,
                     languages: {
-                        $map: {
-                            input: "$codes",
-                            as: "c",
-                            in: "$$c.language"
-                        }
-                    },                  // full array of codes
+                        $ifNull: [
+                            "$languages",
+                            ["javascript", "python", "java", "cpp"]
+                        ]
+                    },
                     createdAt: 1,
                     modifiedAt: 1
                 }

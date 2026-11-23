@@ -49,7 +49,11 @@ class ContestScoringService {
                 };
                 const response = await axios.post(
                     `${compilerUrl}/api/batch`,
-                    { language, code: sourceCode, testcases },
+                    {
+                        language,
+                        code: require('./codeDriver.service').wrap(sourceCode, language),
+                        testcases: testcases.map(tc => ({ input: tc.input, output: tc.output }))
+                    },
                     config
                 );
 
@@ -59,10 +63,11 @@ class ContestScoringService {
                     verdict = response.data.isFullyPassed ? 'Accepted' : 'Wrong Answer';
                     executionTime = response.data.totalExecutionTime || (response.data.results?.[0]?.executionTime) || 0;
                     memory = response.data.memory || 0;
-                    if (response.data.results) {
-                        testCaseResults = response.data.results.map((r, idx) => ({
+                    const rawResults = response.data.testResults || response.data.results;
+                    if (rawResults) {
+                        testCaseResults = rawResults.map((r, idx) => ({
                             testCaseNumber: idx + 1,
-                            status: r.passed ? 'Passed' : 'Failed',
+                            status: (r.isPassed || r.passed) ? 'Passed' : 'Failed',
                             executionTime: r.executionTime || 0,
                             memory: r.memory || 0,
                             error: r.error || null

@@ -2,6 +2,7 @@ const { BrevoClient } = require("@getbrevo/brevo");
 const nodemailer = require("nodemailer");
 
 let brevoClient = null;
+let resendClient = null;
 let nodemailerTransporter = null;
 let hasLoggedFallbackWarning = false;
 
@@ -12,6 +13,18 @@ function getBrevoClient() {
     brevoClient = new BrevoClient({ apiKey });
   }
   return brevoClient;
+}
+
+function getResendClient() {
+  if (!resendClient && process.env.RESEND_API_KEY) {
+    try {
+      const { Resend } = require("resend");
+      resendClient = new Resend(process.env.RESEND_API_KEY);
+    } catch (e) {
+      console.warn("Resend package not available:", e.message);
+    }
+  }
+  return resendClient;
 }
 
 function getNodemailerTransporter() {
@@ -38,29 +51,35 @@ function getNodemailerTransporter() {
  * Parses an address string like '"CoderHaveli Daily" <user@domain.com>' or 'user@domain.com'
  */
 function parseAddress(addr, defaultName = "CoderHaveli") {
-  const defaultEmail = process.env.BREVO_SENDER_EMAIL || process.env.MAIL_USER || "";
+  const defaultEmail = process.env.BREVO_SENDER_EMAIL || process.env.MAIL_USER || "prashant.dev0512@gmail.com";
   if (!addr) {
     return { name: defaultName, email: defaultEmail };
   }
   const match = addr.match(/^"?([^"<]*)"?\s*<([^>]+)>$/);
   if (match) {
+    const candidate = match[2].trim();
+    const valid = candidate && candidate !== "undefined" && candidate !== "null" ? candidate : defaultEmail;
     return {
       name: match[1].trim() || defaultName,
-      email: match[2].trim() || defaultEmail,
+      email: valid,
     };
   }
-  if (addr.includes("@")) {
+  if (addr.includes("@") && !addr.includes("undefined") && !addr.includes("null")) {
     return { name: defaultName, email: addr.trim() };
   }
-  return { name: addr.trim(), email: defaultEmail };
+  return { name: addr.trim() || defaultName, email: defaultEmail };
 }
 
 function resolveSender(from) {
-  const verifiedEmail = process.env.BREVO_SENDER_EMAIL || process.env.MAIL_USER;
+  const verifiedEmail = process.env.BREVO_SENDER_EMAIL || process.env.MAIL_USER || "prashant.dev0512@gmail.com";
   const parsed = parseAddress(from, "CoderHaveli");
+  const email = (verifiedEmail && verifiedEmail !== "undefined" && verifiedEmail !== "null")
+    ? verifiedEmail
+    : (parsed.email && parsed.email !== "undefined" && parsed.email !== "null" ? parsed.email : "prashant.dev0512@gmail.com");
+
   return {
-    name: parsed.name,
-    email: verifiedEmail || parsed.email,
+    name: parsed.name || "CoderHaveli",
+    email,
   };
 }
 
@@ -88,9 +107,31 @@ function resolveRecipients(to) {
   return results;
 }
 
+async function sendViaResend({ from, to, subject, html, text }) {
+  const resend = getResendClient();
+  if (!resend) throw new Error("Resend is not initialized");
+
+  const fromAddress = process.env.RESEND_FROM_EMAIL || "CoderHaveli <onboarding@resend.dev>";
+  const toList = Array.isArray(to) ? to : [to];
+
+  const payload = {
+    from: fromAddress,
+    to: toList,
+    subject: subject || "Notification from CoderHaveli",
+    html: html || (text ? `<pre>${text}</pre>` : "<p></p>"),
+  };
+  if (text) payload.text = text;
+
+  const { data, error } = await resend.emails.send(payload);
+  if (error) {
+    throw new Error(error.message || JSON.stringify(error));
+  }
+  return data;
+}
+
 /**
  * Brevo Mailer service
- * Uses Brevo's HTTPS REST API (Port 443) which never times out on cloud hosts.
+ * Uses Brevo's HTTPS REST API (Port 443) which never times out on cloud hosts like Render.
  * Compatible with transporter.sendMail({ from, to, subject, html, text })
  */
 const Mailer = {
@@ -133,11 +174,32 @@ const Mailer = {
           (error.body && error.body.message) ||
           error.message ||
           JSON.stringify(error);
+        console.error(`Brevo send failed: ${errMsg}`);
+
+        // Try Resend fallback if available on HTTPS
+        if (process.env.RESEND_API_KEY) {
+          try {
+            console.log("Attempting fallback via Resend HTTP API...");
+            return await sendViaResend({ from, to, subject, html, text });
+          } catch (resendErr) {
+            console.error("Resend fallback also failed:", resendErr.message);
+          }
+        }
+
         throw new Error(`Brevo send failed: ${errMsg}`);
       }
     }
 
-    // 2. Fallback: Nodemailer (SMTP — works locally, blocked on Render)
+    // 2. Secondary: Resend HTTPS API (Port 443 — also works on Render)
+    if (process.env.RESEND_API_KEY) {
+      try {
+        return await sendViaResend({ from, to, subject, html, text });
+      } catch (resendErr) {
+        console.error("Resend send failed:", resendErr.message);
+      }
+    }
+
+    // 3. Fallback: Nodemailer (SMTP — works locally, blocked on Render free tier)
     const transporter = getNodemailerTransporter();
     if (transporter) {
       if (!hasLoggedFallbackWarning) {
@@ -174,6 +236,11 @@ const Mailer = {
         if (typeof callback === "function") callback(err, false);
         throw err;
       }
+    }
+
+    if (process.env.RESEND_API_KEY) {
+      if (typeof callback === "function") callback(null, true);
+      return true;
     }
 
     const transporter = getNodemailerTransporter();

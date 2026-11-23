@@ -38,13 +38,8 @@ const register = async (req, res) => {
                 return res.status(400).json({ message: 'Email already registered' });
             }
 
-            if (existingUser.otpExpiry && existingUser.otpExpiry < new Date()) {
-                await User.deleteOne({ _id: existingUser._id });
-            } else {
-                return res.status(400).json({
-                    message: 'OTP already sent. Please verify or wait to re-register.'
-                });
-            }
+            // Remove previous unverified attempt so user can re-register and receive fresh OTP
+            await User.deleteOne({ _id: existingUser._id });
         }
 
         // Generate OTP and set expiration (10 minutes)
@@ -68,8 +63,9 @@ const register = async (req, res) => {
 
         await newUser.save();
         // Send OTP email
-        await transporter.sendMail({
-            from: `"CoderHaveli" <${process.env.MAIL_USER}>`,
+        try {
+            await transporter.sendMail({
+            from: `"CoderHaveli" <${process.env.BREVO_SENDER_EMAIL || process.env.MAIL_USER || 'prashant.dev0512@gmail.com'}>`,
             to: email,
             subject: "🔐 Your CoderHaveli Verification Code",
             html: `
@@ -122,7 +118,15 @@ const register = async (req, res) => {
             </div>
         </div>
     `
-        });
+            });
+        } catch (mailError) {
+            console.error('Failed to send registration OTP email:', mailError);
+            // Delete newly created unverified user so they aren't stuck
+            await User.deleteOne({ _id: newUser._id });
+            return res.status(500).json({
+                message: `Failed to send verification email: ${mailError.message || 'Email delivery failed'}. Please check your email configuration.`
+            });
+        }
 
         res.status(200).json({
             message: 'OTP sent to your email',
@@ -132,7 +136,7 @@ const register = async (req, res) => {
 
     } catch (error) {
         console.error('Registration error:', error);
-        res.status(500).json({ message: 'Registration failed. Please try again.' });
+        res.status(500).json({ message: error.message || 'Registration failed. Please try again.' });
     }
 };
 
@@ -194,7 +198,7 @@ const resendRegistrationOTP = async (req, res) => {
 
         // Send new OTP email
         await transporter.sendMail({
-            from: `"CoderHaveli" <${process.env.MAIL_USER}>`,
+            from: `"CoderHaveli" <${process.env.BREVO_SENDER_EMAIL || process.env.MAIL_USER || 'prashant.dev0512@gmail.com'}>`,
             to: email,
             subject: "🔐 Your CoderHaveli Resend Verification Code",
             html: `
@@ -454,7 +458,7 @@ const forgetPassword = async (req, res) => {
         await user.save();
 
         await transporter.sendMail({
-            from: `"CoderHaveli" <${process.env.MAIL_USER}>`,
+            from: `"CoderHaveli" <${process.env.BREVO_SENDER_EMAIL || process.env.MAIL_USER || 'prashant.dev0512@gmail.com'}>`,
             to: email,
             subject: "🔐 Your CoderHaveli Password Reset Code",
             html: `

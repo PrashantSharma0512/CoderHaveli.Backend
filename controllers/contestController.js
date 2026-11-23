@@ -770,7 +770,11 @@ contestController.runContestSample = async (req, res) => {
                 const axios = require('axios');
                 const response = await axios.post(
                     `${compilerUrl}/api/batch`,
-                    { language, code: sourceCode, testcases: testcasesToRun },
+                    {
+                    language,
+                    code: require('../services/codeDriver.service').wrap(sourceCode, language),
+                    testcases: testcasesToRun
+                },
                     config
                 );
 
@@ -1203,31 +1207,37 @@ contestController.getHostingEntitlement = async (req, res) => {
 };
 
 /**
- * GET /api/contests/friends/search?q=
+ * GET /api/contests/friends/search?q= or ?search=
  * Search platform users by username, name, or email for inviting to private contests
  */
 contestController.searchUsersForInvite = async (req, res) => {
     try {
         const User = mongoose.model('User');
-        const { q = '' } = req.query;
+        const q = (req.query.q || req.query.search || req.query.query || '').trim();
 
-        if (!q || q.trim().length < 2) {
+        if (!q) {
             return res.json({ success: true, users: [] });
         }
 
-        const regex = new RegExp(q.trim(), 'i');
+        const escapedQ = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(escapedQ, 'i');
 
-        const users = await User.find({
-            _id: { $ne: req.user._id },
+        const userFilter = {
             isDeleted: { $ne: true },
             $or: [
                 { username: regex },
                 { name: regex },
                 { email: regex }
             ]
-        })
+        };
+
+        if (req.user && req.user._id && mongoose.Types.ObjectId.isValid(req.user._id)) {
+            userFilter._id = { $ne: new mongoose.Types.ObjectId(req.user._id) };
+        }
+
+        const users = await User.find(userFilter)
             .select('name username email avatar')
-            .limit(10)
+            .limit(20)
             .lean();
 
         return res.json({ success: true, users });
