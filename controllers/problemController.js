@@ -132,12 +132,20 @@ const getProblemById = async (req, res) => {
         const Problem = mongoose.model('ProblemList');
         const { id } = req.query;
 
-        // ✅ Validate ObjectId before using it
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ error: "Invalid problem ID format" });
+        if (!id) {
+            return res.status(400).json({ error: "Problem ID is required" });
         }
 
-        const problem = await Problem.findById(id).lean();
+        // Support lookup by MongoDB _id OR quesId (number / string)
+        let problem = null;
+        if (mongoose.Types.ObjectId.isValid(id)) {
+            problem = await Problem.findById(id).lean();
+        }
+        if (!problem) {
+            problem = await Problem.findOne({ quesId: isNaN(id) ? id : Number(id) }).lean()
+                   || await Problem.findOne({ quesId: String(id) }).lean();
+        }
+
         if (!problem) {
             return res.status(404).json({ error: "Problem not found" });
         }
@@ -204,12 +212,18 @@ const getEditorialById = async (req, res) => {
         const ProblemList = mongoose.model('ProblemList');
         const Approaches = mongoose.model('Approaches');
 
-        const quesIndex = await ProblemList.findOne({ _id: id }, { quesId: 1 });
+        let quesIndex = null;
+        if (mongoose.Types.ObjectId.isValid(id)) {
+            quesIndex = await ProblemList.findOne({ _id: id });
+        }
+        if (!quesIndex) {
+            quesIndex = await ProblemList.findOne({ quesId: Number(id) || id });
+        }
         if (!quesIndex) {
             return res.status(404).json({ message: "Problem not found" });
         }
 
-        const data = await Approaches.find(
+        let data = await Approaches.find(
             { quesId: quesIndex.quesId },
             {
                 approachDesc: 1,
@@ -221,11 +235,16 @@ const getEditorialById = async (req, res) => {
                 videoUrl: 1,
                 order: 1,
             }
-        );
+        ).sort({ order: 1 });
+
+        if (!data || data.length === 0) {
+            const { generateFallbackEditorial } = require('../services/editorial.service');
+            data = generateFallbackEditorial(quesIndex);
+        }
 
         res.status(200).json(data);
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error in getEditorialById:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -368,11 +387,23 @@ const submit = async (req, res) => {
         });
         const savedSubmission = await newSubmission.save();
 
+        // Process daily streak for AajKaSawal on accepted submission
+        let dailyStreakResult = null;
+        if (status === 'Accepted') {
+            try {
+                const DailyProblemService = require('../services/dailyProblem.service');
+                dailyStreakResult = await DailyProblemService.handleAcceptedSubmission(userId, quesId);
+            } catch (streakErr) {
+                console.error('Error updating daily streak on submission:', streakErr);
+            }
+        }
+
         return res.json({
             ...response.data,
             code,
             submissionId: savedSubmission._id,
-            codeId: savedCode._id
+            codeId: savedCode._id,
+            dailyStreak: dailyStreakResult
         });
 
     } catch (err) {

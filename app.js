@@ -130,6 +130,8 @@ app.use("/api/contests", require("./routes/contest"));
 
 app.use("/api/admin/contests", require("./routes/adminContest"));
 
+app.use("/api/daily", require("./routes/daily"));
+
 /* ==========================================================
     Analytics
 ========================================================== */

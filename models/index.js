@@ -28,6 +28,8 @@ const contestInvitationSchema = require('./contestInvitations.schema');
 const contestPassPlanSchema = require('./contestPassPlans.schema');
 const contestPassPurchaseSchema = require('./contestPassPurchases.schema');
 const weeklyContestConfigSchema = require('./weeklyContestConfigs.schema');
+const dailyProblemSchema = require('./dailyProblems.schema');
+const dailyStreakSchema = require('./dailyStreaks.schema');
 
 module.exports = (mongoose) => {
     const User = userSchema(mongoose);
@@ -60,6 +62,8 @@ module.exports = (mongoose) => {
     const ContestPassPlan = contestPassPlanSchema(mongoose);
     const ContestPassPurchase = contestPassPurchaseSchema(mongoose);
     const WeeklyContestConfig = weeklyContestConfigSchema(mongoose);
+    const DailyProblem = dailyProblemSchema(mongoose);
+    const DailyStreak = dailyStreakSchema(mongoose);
 
     return {
         User,
@@ -91,7 +95,9 @@ module.exports = (mongoose) => {
         ContestInvitation,
         ContestPassPlan,
         ContestPassPurchase,
-        WeeklyContestConfig
+        WeeklyContestConfig,
+        DailyProblem,
+        DailyStreak
     };
 };
 

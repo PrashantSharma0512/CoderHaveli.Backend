@@ -1,0 +1,303 @@
+/**
+ * dailyProblem.service.js
+ * Core engine for "AajKaSawal" (Problem of the Day) and "Code Tapasya" daily streak calendar.
+ */
+
+const mongoose = require('mongoose');
+
+const CATCHY_QUOTES = [
+    'Consistency is the Key — Solve Today\'s Challenge!',
+    'Master Algorithms Daily, Crack Your Dream Tech Role.',
+    'Small Daily Efforts Compound into Massive Results.',
+    'Code Tapasya: Stay Consistent, Stay Ahead.',
+    'One Problem a Day Keeps the Rejection Away!',
+    'Sharpen Your Problem Solving Skills Every Single Day.',
+    'Build Your Coding Habit — One Challenge at a Time.',
+    'Consistency Over Intensity — Keep Your Streak Alive!'
+];
+
+// Curated rotation seed problem IDs (guaranteed to have high quality testcases & editorials)
+const CURATED_ROTATION_IDS = [
+    '11', // Container With Most Water
+    '1',  // Two Sum
+    '3',  // Longest Substring Without Repeating Characters
+    '15', // 3Sum
+    '20', // Valid Parentheses
+    '53', // Maximum Subarray
+    '121',// Best Time to Buy and Sell Stock
+    '70', // Climbing Stairs
+    '42', // Trapping Rain Water
+    '2',  // Add Two Numbers
+    '4',  // Median of Two Sorted Arrays
+    '5',  // Longest Palindromic Substring
+    '6',  // Zigzag Conversion
+    '7',  // Reverse Integer
+    '8',  // String to Integer (atoi)
+    '9',  // Palindrome Number
+    '10'  // Regular Expression Matching
+];
+
+function getISTDateString(dateObj = new Date()) {
+    // Return YYYY-MM-DD aligned to Indian Standard Time (UTC+5:30)
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istDate = new Date(dateObj.getTime() + istOffset);
+    return istDate.toISOString().split('T')[0];
+}
+
+function getYesterdayISTDateString() {
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    return getISTDateString(yesterday);
+}
+
+function getSecondsUntilMidnightIST() {
+    const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istNow = new Date(now.getTime() + istOffset);
+
+    const midnightIST = new Date(istNow);
+    midnightIST.setUTCHours(24, 0, 0, 0);
+
+    return Math.max(0, Math.floor((midnightIST.getTime() - istNow.getTime()) / 1000));
+}
+
+class DailyProblemService {
+    /**
+     * Retrieves or auto-creates today's featured "AajKaSawal".
+     */
+    static async getTodayProblem() {
+        const DailyProblem = mongoose.model('DailyProblem');
+        const ProblemList = mongoose.model('ProblemList');
+
+        const todayStr = getISTDateString();
+        let dailyDoc = await DailyProblem.findOne({ date: todayStr }).populate('problemRef').lean();
+
+        if (!dailyDoc) {
+            // Deterministically select today's question based on the day of the year
+            const daysSinceEpoch = Math.floor(Date.now() / (1000 * 60 * 60 * 24));
+            const selectedQuesId = CURATED_ROTATION_IDS[daysSinceEpoch % CURATED_ROTATION_IDS.length];
+
+            let problem = await ProblemList.findOne({ quesId: selectedQuesId });
+            if (!problem) {
+                // Fallback to first available problem if specific ID not found
+                problem = await ProblemList.findOne({ difficulty: 'medium' }) || await ProblemList.findOne({});
+            }
+
+            if (!problem) {
+                throw new Error('No problems found in ProblemList collection.');
+            }
+
+            const quoteIndex = daysSinceEpoch % CATCHY_QUOTES.length;
+            const quote = CATCHY_QUOTES[quoteIndex];
+
+            const cleanDesc = (problem.quesDesc || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            const snippet = cleanDesc.slice(0, 180) + (cleanDesc.length > 180 ? '...' : '');
+
+            dailyDoc = await DailyProblem.create({
+                date: todayStr,
+                quesId: String(problem.quesId),
+                problemRef: problem._id,
+                quesName: problem.quesName,
+                difficulty: problem.difficulty || 'medium',
+                tags: problem.tags || [],
+                descriptionSnippet: snippet,
+                catchyQuote: quote,
+                totalSolves: 0
+            });
+
+            dailyDoc = await DailyProblem.findById(dailyDoc._id).populate('problemRef').lean();
+        }
+
+        const secondsLeft = getSecondsUntilMidnightIST();
+
+        const problemObjectId = (dailyDoc.problemRef && dailyDoc.problemRef._id)
+            ? String(dailyDoc.problemRef._id)
+            : String(dailyDoc.problemRef || '');
+
+        return {
+            ...dailyDoc,
+            problemId: problemObjectId,
+            problemObjectId: problemObjectId,
+            secondsUntilNext: secondsLeft,
+            serverDate: todayStr
+        };
+    }
+
+    /**
+     * Gets user streak and monthly calendar solved days matrix.
+     */
+    static async getUserStreakAndCalendar(userId, yearNum, monthNum) {
+        const DailyStreak = mongoose.model('DailyStreak');
+        const todayStr = getISTDateString();
+
+        let streakDoc = null;
+        if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+            streakDoc = await DailyStreak.findOne({ userId }).lean();
+        }
+
+        // Filter history for the requested month
+        const targetYear = yearNum || parseInt(todayStr.split('-')[0], 10);
+        const targetMonth = monthNum || parseInt(todayStr.split('-')[1], 10);
+        const monthPrefix = `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
+
+        const solvedDatesSet = new Set();
+        if (streakDoc && Array.isArray(streakDoc.history)) {
+            streakDoc.history.forEach((h) => {
+                if (h.date && h.date.startsWith(monthPrefix)) {
+                    solvedDatesSet.add(h.date);
+                }
+            });
+        }
+
+        // Check if today is already solved
+        const isTodaySolved = solvedDatesSet.has(todayStr) || (streakDoc && streakDoc.lastSolvedDate === todayStr);
+
+        // Fetch registered daily problems for this month
+        const DailyProblem = mongoose.model('DailyProblem');
+        const ProblemList = mongoose.model('ProblemList');
+
+        const dailyDocs = await DailyProblem.find({
+            date: { $regex: new RegExp(`^${monthPrefix}`) }
+        }).populate('problemRef').lean();
+
+        const dailyProblemsMap = {};
+        dailyDocs.forEach(d => {
+            const probId = d.problemRef?._id ? String(d.problemRef._id) : (d.problemRef ? String(d.problemRef) : String(d.quesId));
+            dailyProblemsMap[d.date] = {
+                quesId: String(d.quesId),
+                quesName: d.quesName,
+                difficulty: d.difficulty || 'Medium',
+                problemId: probId
+            };
+        });
+
+        // For any dates not yet in DB, dynamically prefill from CURATED_ROTATION_IDS
+        const daysInMonth = new Date(targetYear, targetMonth, 0).getDate();
+        const missingDays = [];
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dStr = `${targetYear}-${String(targetMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            if (!dailyProblemsMap[dStr]) {
+                const dateObj = new Date(Date.UTC(targetYear, targetMonth - 1, day));
+                const daysSinceEpoch = Math.floor(dateObj.getTime() / (1000 * 60 * 60 * 24));
+                const qId = CURATED_ROTATION_IDS[Math.abs(daysSinceEpoch) % CURATED_ROTATION_IDS.length];
+                missingDays.push({ dStr, qId });
+            }
+        }
+
+        if (missingDays.length > 0) {
+            const qIds = [...new Set(missingDays.map(m => m.qId))];
+            const foundProblems = await ProblemList.find({ quesId: { $in: qIds } }, { quesId: 1, quesName: 1, difficulty: 1, _id: 1 }).lean();
+            const probByQuesId = {};
+            foundProblems.forEach(p => { probByQuesId[String(p.quesId)] = p; });
+
+            missingDays.forEach(({ dStr, qId }) => {
+                const p = probByQuesId[qId];
+                if (p) {
+                    dailyProblemsMap[dStr] = {
+                        quesId: String(p.quesId),
+                        quesName: p.quesName,
+                        difficulty: p.difficulty || 'Medium',
+                        problemId: String(p._id)
+                    };
+                }
+            });
+        }
+
+        return {
+            currentStreak: streakDoc ? streakDoc.currentStreak : 0,
+            longestStreak: streakDoc ? streakDoc.longestStreak : 0,
+            totalDaysSolved: streakDoc ? streakDoc.totalDaysSolved : 0,
+            lastSolvedDate: streakDoc ? streakDoc.lastSolvedDate : null,
+            isTodaySolved: !!isTodaySolved,
+            solvedDates: Array.from(solvedDatesSet),
+            dailyProblems: dailyProblemsMap,
+            todayDate: todayStr,
+            year: targetYear,
+            month: targetMonth
+        };
+    }
+
+    /**
+     * Invoked when a submission gets Accepted. Checks if it matches today's AajKaSawal.
+     */
+    static async handleAcceptedSubmission(userId, quesId) {
+        if (!userId || !quesId) return { isDailyProblem: false };
+
+        const DailyProblem = mongoose.model('DailyProblem');
+        const DailyStreak = mongoose.model('DailyStreak');
+
+        const todayStr = getISTDateString();
+        const yesterdayStr = getYesterdayISTDateString();
+
+        // Check today's problem
+        const todayProblem = await DailyProblem.findOne({ date: todayStr });
+        if (!todayProblem) return { isDailyProblem: false };
+
+        if (String(todayProblem.quesId) !== String(quesId)) {
+            return { isDailyProblem: false };
+        }
+
+        // Increment total solves on today's problem
+        await DailyProblem.updateOne({ _id: todayProblem._id }, { $inc: { totalSolves: 1 } });
+
+        // User streak update
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return { isDailyProblem: true, streakUpdated: false };
+        }
+
+        let userStreak = await DailyStreak.findOne({ userId });
+
+        if (!userStreak) {
+            userStreak = await DailyStreak.create({
+                userId,
+                currentStreak: 1,
+                longestStreak: 1,
+                totalDaysSolved: 1,
+                lastSolvedDate: todayStr,
+                history: [{ date: todayStr, quesId: String(quesId), solvedAt: new Date() }]
+            });
+            return {
+                isDailyProblem: true,
+                currentStreak: 1,
+                longestStreak: 1,
+                isNewSolve: true
+            };
+        }
+
+        // Already solved today
+        if (userStreak.lastSolvedDate === todayStr) {
+            return {
+                isDailyProblem: true,
+                currentStreak: userStreak.currentStreak,
+                longestStreak: userStreak.longestStreak,
+                isNewSolve: false
+            };
+        }
+
+        let newStreak = 1;
+        if (userStreak.lastSolvedDate === yesterdayStr) {
+            newStreak = (userStreak.currentStreak || 0) + 1;
+        }
+
+        const newLongest = Math.max(userStreak.longestStreak || 0, newStreak);
+        const newTotalDays = (userStreak.totalDaysSolved || 0) + 1;
+
+        userStreak.currentStreak = newStreak;
+        userStreak.longestStreak = newLongest;
+        userStreak.totalDaysSolved = newTotalDays;
+        userStreak.lastSolvedDate = todayStr;
+        userStreak.history.push({ date: todayStr, quesId: String(quesId), solvedAt: new Date() });
+        userStreak.modifiedAt = new Date();
+
+        await userStreak.save();
+
+        return {
+            isDailyProblem: true,
+            currentStreak: newStreak,
+            longestStreak: newLongest,
+            isNewSolve: true
+        };
+    }
+}
+
+module.exports = DailyProblemService;
+
