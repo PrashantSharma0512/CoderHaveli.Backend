@@ -11,4 +11,9 @@ router.get('/approaches', Authenicated, adminController.Approaches);
 router.get('/get-approach', Authenicated, adminController.getApproach);
 router.post('/save-approach', Authenicated, adminController.saveApproach);
 router.delete('/delete-approach', Authenicated, adminController.deleteApproach);
+router.get('/coins/overview', Authenicated, adminController.getCoinsOverview);
+router.post('/coins/adjust', Authenicated, adminController.adjustUserCoins);
+router.put('/coins/config', Authenicated, adminController.updateCoinsConfig);
+router.get('/privacy-policy', Authenicated, adminController.getPrivacyPolicy);
+router.put('/privacy-policy', Authenicated, adminController.updatePrivacyPolicy);
 module.exports = router

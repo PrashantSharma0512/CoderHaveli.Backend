@@ -169,6 +169,7 @@ class ContestScoringService {
         }
 
         // Only update score if not previously solved
+        let coinsEarned = 0;
         if (!probScore.solved) {
             probScore.attempts += 1;
             if (verdict === 'Accepted') {
@@ -187,6 +188,25 @@ class ContestScoringService {
                 contestScore.totalScore += maxPoints;
                 contestScore.problemsSolved += 1;
                 contestScore.lastAcceptedAt = now;
+
+                // Award Haveli Coins for solving a contest problem
+                try {
+                    const HaveliCoinService = require('./haveliCoin.service');
+                    const coinConfig = await HaveliCoinService.getConfig();
+                    const solveCoins = coinConfig.contestSolveCoins ?? 1;
+                    if (solveCoins > 0) {
+                        await HaveliCoinService.creditCoins(
+                            user._id,
+                            solveCoins,
+                            'contest_solve',
+                            `Solved "${problem.quesName || problem.quesId}" in ${contest.title || 'Contest'}`,
+                            { contestId: String(contest._id), problemId: String(problem._id), quesId: String(problem.quesId || '') }
+                        );
+                        coinsEarned = solveCoins;
+                    }
+                } catch (coinErr) {
+                    console.error('Error awarding contest solve Haveli Coins:', coinErr.message);
+                }
             }
         }
 
@@ -203,6 +223,7 @@ class ContestScoringService {
             contestScore: refreshedScore,
             verdict,
             scoreEarned,
+            coinsEarned,
             executionTime,
             memory,
             testCaseResults

@@ -4,6 +4,7 @@
  */
 
 const mongoose = require('mongoose');
+const HaveliCoinService = require('./haveliCoin.service');
 
 const CATCHY_QUOTES = [
     'Consistency is the Key — Solve Today\'s Challenge!',
@@ -49,6 +50,15 @@ function getYesterdayISTDateString() {
     return getISTDateString(yesterday);
 }
 
+function getDaysSinceEpochFromDateStr(dateStr) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return Math.floor(Date.UTC(y, m - 1, d) / (1000 * 60 * 60 * 24));
+}
+
+function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function getSecondsUntilMidnightIST() {
     const now = new Date();
     const istOffset = 5.5 * 60 * 60 * 1000;
@@ -62,49 +72,184 @@ function getSecondsUntilMidnightIST() {
 
 class DailyProblemService {
     /**
-     * Retrieves or auto-creates today's featured "AajKaSawal".
+     * Retrieves or auto-creates today's featured "AajKaSawal" (or user's Personal AajKaSawal if active & topic selected).
      */
-    static async getTodayProblem() {
+    static async getTodayProblem(userId = null) {
         const DailyProblem = mongoose.model('DailyProblem');
         const ProblemList = mongoose.model('ProblemList');
+        const User = mongoose.model('User');
+        const PersonalDailyProblem = mongoose.model('PersonalDailyProblem');
 
         const todayStr = getISTDateString();
+        const config = await HaveliCoinService.getConfig();
+
+        let userDoc = null;
+        if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+            userDoc = await User.findById(userId, { haveliCoins: 1, personalAajKaSawal: 1 }).lean();
+        }
+
+        const isPersonalActive = HaveliCoinService.isPersonalPlanActive(userDoc);
+        const selectedTopic = isPersonalActive ? (userDoc?.personalAajKaSawal?.selectedTopic || null) : null;
+
+        // If user has active Personal AajKaSawal plan AND a selected topic, serve their personalized topic POTD
+        if (isPersonalActive && selectedTopic) {
+            let personalDoc = await PersonalDailyProblem.findOne({ userId, date: todayStr })
+                .populate('problemRef')
+                .lean();
+
+            // If user changed topic today and hasn't solved today's personal POTD yet, regenerate for new topic
+            if (personalDoc && personalDoc.topic.toLowerCase() !== selectedTopic.toLowerCase() && !personalDoc.solved) {
+                await PersonalDailyProblem.deleteOne({ _id: personalDoc._id });
+                personalDoc = null;
+            }
+
+            if (!personalDoc) {
+                const recentPersonal = await PersonalDailyProblem.find({ userId, date: { $lt: todayStr } })
+                    .sort({ date: -1 })
+                    .limit(7)
+                    .lean();
+                const recentQuesIds = recentPersonal.map(d => String(d.quesId));
+
+                const topicRegex = new RegExp(`^${escapeRegex(selectedTopic)}$`, 'i');
+                let candidates = await ProblemList.find({
+                    tags: topicRegex,
+                    quesId: { $nin: recentQuesIds }
+                }).sort({ quesId: 1 }).limit(100).lean();
+
+                if (candidates.length === 0) {
+                    candidates = await ProblemList.find({ tags: topicRegex }).sort({ quesId: 1 }).limit(100).lean();
+                }
+                if (candidates.length === 0) {
+                    // Fallback to substring match on tag
+                    const fuzzyRegex = new RegExp(escapeRegex(selectedTopic), 'i');
+                    candidates = await ProblemList.find({ tags: fuzzyRegex }).sort({ quesId: 1 }).limit(100).lean();
+                }
+
+                if (candidates.length > 0) {
+                    const daysSinceEpoch = getDaysSinceEpochFromDateStr(todayStr);
+                    const userHash = String(userId).split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+                    const chosen = candidates[Math.abs(daysSinceEpoch + userHash) % candidates.length];
+
+                    const cleanDesc = (chosen.quesDesc || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                    const snippet = cleanDesc.slice(0, 180) + (cleanDesc.length > 180 ? '...' : '');
+
+                    personalDoc = await PersonalDailyProblem.findOneAndUpdate(
+                        { userId, date: todayStr },
+                        {
+                            $setOnInsert: {
+                                userId,
+                                date: todayStr,
+                                topic: selectedTopic,
+                                quesId: String(chosen.quesId),
+                                problemRef: chosen._id,
+                                quesName: chosen.quesName,
+                                difficulty: (chosen.difficulty || 'medium').toLowerCase(),
+                                tags: chosen.tags || [],
+                                descriptionSnippet: snippet,
+                                catchyQuote: `Personal AajKaSawal (${selectedTopic}) — Sharpen Your Mastery!`,
+                                solved: false
+                            }
+                        },
+                        { upsert: true, new: true }
+                    ).populate('problemRef').lean();
+                }
+            }
+
+            if (personalDoc) {
+                const secondsLeft = getSecondsUntilMidnightIST();
+                const problemObjectId = (personalDoc.problemRef && personalDoc.problemRef._id)
+                    ? String(personalDoc.problemRef._id)
+                    : String(personalDoc.problemRef || '');
+
+                return {
+                    ...personalDoc,
+                    problemId: problemObjectId,
+                    problemObjectId: problemObjectId,
+                    secondsUntilNext: secondsLeft,
+                    serverDate: todayStr,
+                    isPersonal: true,
+                    personalTopic: personalDoc.topic,
+                    haveliCoins: userDoc?.haveliCoins || 0,
+                    coinReward: config.potdRewardCoins,
+                    personalPotdPrice: config.personalPotdPrice,
+                    personalPotdDurationDays: config.personalPotdDurationDays,
+                    personalAajKaSawal: {
+                        isActive: true,
+                        selectedTopic,
+                        purchasedAt: userDoc?.personalAajKaSawal?.purchasedAt || null,
+                        expiresAt: userDoc?.personalAajKaSawal?.expiresAt || null
+                    }
+                };
+            }
+        }
+
         let dailyDoc = await DailyProblem.findOne({ date: todayStr }).populate('problemRef').lean();
+        const recentDocs = await DailyProblem.find({ date: { $lt: todayStr } })
+            .sort({ date: -1 })
+            .limit(3)
+            .lean();
+        const recentQuesIds = new Set(recentDocs.map(d => String(d.quesId)));
+
+        // Self-heal if today's POTD was accidentally generated with yesterday's question (e.g. UTC vs IST midnight bug)
+        if (dailyDoc && recentDocs.length > 0 && String(dailyDoc.quesId) === String(recentDocs[0].quesId) && (dailyDoc.totalSolves || 0) === 0) {
+            await DailyProblem.deleteOne({ _id: dailyDoc._id });
+            dailyDoc = null;
+        }
 
         if (!dailyDoc) {
-            // Deterministically select today's question based on the day of the year
-            const daysSinceEpoch = Math.floor(Date.now() / (1000 * 60 * 60 * 24));
-            const selectedQuesId = CURATED_ROTATION_IDS[daysSinceEpoch % CURATED_ROTATION_IDS.length];
+            // Deterministically select today's question based on the IST date (not UTC Date.now())
+            const daysSinceEpoch = getDaysSinceEpochFromDateStr(todayStr);
+            const startIndex = Math.abs(daysSinceEpoch) % CURATED_ROTATION_IDS.length;
+
+            let selectedQuesId = CURATED_ROTATION_IDS[startIndex];
+            for (let offset = 0; offset < CURATED_ROTATION_IDS.length; offset++) {
+                const candidateId = CURATED_ROTATION_IDS[(startIndex + offset) % CURATED_ROTATION_IDS.length];
+                if (!recentQuesIds.has(String(candidateId))) {
+                    selectedQuesId = candidateId;
+                    break;
+                }
+            }
 
             let problem = await ProblemList.findOne({ quesId: selectedQuesId });
+            if (!problem && !isNaN(Number(selectedQuesId))) {
+                problem = await ProblemList.findOne({ quesId: Number(selectedQuesId) });
+            }
             if (!problem) {
-                // Fallback to first available problem if specific ID not found
-                problem = await ProblemList.findOne({ difficulty: 'medium' }) || await ProblemList.findOne({});
+                // Fallback to any problem not used in recent days
+                problem = await ProblemList.findOne({
+                    difficulty: 'medium',
+                    quesId: { $nin: Array.from(recentQuesIds) }
+                }) || await ProblemList.findOne({ quesId: { $nin: Array.from(recentQuesIds) } })
+                  || await ProblemList.findOne({});
             }
 
             if (!problem) {
                 throw new Error('No problems found in ProblemList collection.');
             }
 
-            const quoteIndex = daysSinceEpoch % CATCHY_QUOTES.length;
+            const quoteIndex = Math.abs(daysSinceEpoch) % CATCHY_QUOTES.length;
             const quote = CATCHY_QUOTES[quoteIndex];
 
             const cleanDesc = (problem.quesDesc || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
             const snippet = cleanDesc.slice(0, 180) + (cleanDesc.length > 180 ? '...' : '');
 
-            dailyDoc = await DailyProblem.create({
-                date: todayStr,
-                quesId: String(problem.quesId),
-                problemRef: problem._id,
-                quesName: problem.quesName,
-                difficulty: problem.difficulty || 'medium',
-                tags: problem.tags || [],
-                descriptionSnippet: snippet,
-                catchyQuote: quote,
-                totalSolves: 0
-            });
-
-            dailyDoc = await DailyProblem.findById(dailyDoc._id).populate('problemRef').lean();
+            dailyDoc = await DailyProblem.findOneAndUpdate(
+                { date: todayStr },
+                {
+                    $setOnInsert: {
+                        date: todayStr,
+                        quesId: String(problem.quesId),
+                        problemRef: problem._id,
+                        quesName: problem.quesName,
+                        difficulty: problem.difficulty || 'medium',
+                        tags: problem.tags || [],
+                        descriptionSnippet: snippet,
+                        catchyQuote: quote,
+                        totalSolves: 0
+                    }
+                },
+                { upsert: true, new: true }
+            ).populate('problemRef').lean();
         }
 
         const secondsLeft = getSecondsUntilMidnightIST();
@@ -118,7 +263,19 @@ class DailyProblemService {
             problemId: problemObjectId,
             problemObjectId: problemObjectId,
             secondsUntilNext: secondsLeft,
-            serverDate: todayStr
+            serverDate: todayStr,
+            isPersonal: false,
+            personalTopic: null,
+            haveliCoins: userDoc?.haveliCoins || 0,
+            coinReward: config.potdRewardCoins,
+            personalPotdPrice: config.personalPotdPrice,
+            personalPotdDurationDays: config.personalPotdDurationDays,
+            personalAajKaSawal: {
+                isActive: isPersonalActive,
+                selectedTopic: userDoc?.personalAajKaSawal?.selectedTopic || null,
+                purchasedAt: userDoc?.personalAajKaSawal?.purchasedAt || null,
+                expiresAt: userDoc?.personalAajKaSawal?.expiresAt || null
+            }
         };
     }
 
@@ -217,27 +374,39 @@ class DailyProblemService {
     }
 
     /**
-     * Invoked when a submission gets Accepted. Checks if it matches today's AajKaSawal.
+     * Invoked when a submission gets Accepted. Checks if it matches today's AajKaSawal (global or Personal AajKaSawal).
      */
     static async handleAcceptedSubmission(userId, quesId) {
         if (!userId || !quesId) return { isDailyProblem: false };
 
         const DailyProblem = mongoose.model('DailyProblem');
         const DailyStreak = mongoose.model('DailyStreak');
+        const PersonalDailyProblem = mongoose.model('PersonalDailyProblem');
 
         const todayStr = getISTDateString();
         const yesterdayStr = getYesterdayISTDateString();
 
-        // Check today's problem
-        const todayProblem = await DailyProblem.findOne({ date: todayStr });
-        if (!todayProblem) return { isDailyProblem: false };
+        // Check both global today's problem and user's Personal AajKaSawal for today
+        const [todayProblem, personalProblem] = await Promise.all([
+            DailyProblem.findOne({ date: todayStr }),
+            mongoose.Types.ObjectId.isValid(userId)
+                ? PersonalDailyProblem.findOne({ userId, date: todayStr })
+                : Promise.resolve(null)
+        ]);
 
-        if (String(todayProblem.quesId) !== String(quesId)) {
+        const matchesGlobal = todayProblem && String(todayProblem.quesId) === String(quesId);
+        const matchesPersonal = personalProblem && String(personalProblem.quesId) === String(quesId);
+
+        if (!matchesGlobal && !matchesPersonal) {
             return { isDailyProblem: false };
         }
 
-        // Increment total solves on today's problem
-        await DailyProblem.updateOne({ _id: todayProblem._id }, { $inc: { totalSolves: 1 } });
+        if (matchesGlobal) {
+            await DailyProblem.updateOne({ _id: todayProblem._id }, { $inc: { totalSolves: 1 } });
+        }
+        if (matchesPersonal && !personalProblem.solved) {
+            await PersonalDailyProblem.updateOne({ _id: personalProblem._id }, { $set: { solved: true } });
+        }
 
         // User streak update
         if (!mongoose.Types.ObjectId.isValid(userId)) {
@@ -245,6 +414,9 @@ class DailyProblemService {
         }
 
         let userStreak = await DailyStreak.findOne({ userId });
+        let currentStreak = 1;
+        let longestStreak = 1;
+        let isNewSolve = false;
 
         if (!userStreak) {
             userStreak = await DailyStreak.create({
@@ -255,46 +427,81 @@ class DailyProblemService {
                 lastSolvedDate: todayStr,
                 history: [{ date: todayStr, quesId: String(quesId), solvedAt: new Date() }]
             });
-            return {
-                isDailyProblem: true,
-                currentStreak: 1,
-                longestStreak: 1,
-                isNewSolve: true
-            };
+            isNewSolve = true;
+        } else if (userStreak.lastSolvedDate === todayStr) {
+            // Already solved POTD today
+            currentStreak = userStreak.currentStreak;
+            longestStreak = userStreak.longestStreak;
+            isNewSolve = false;
+        } else {
+            let newStreak = 1;
+            if (userStreak.lastSolvedDate === yesterdayStr) {
+                newStreak = (userStreak.currentStreak || 0) + 1;
+            }
+            const newLongest = Math.max(userStreak.longestStreak || 0, newStreak);
+            const newTotalDays = (userStreak.totalDaysSolved || 0) + 1;
+
+            userStreak.currentStreak = newStreak;
+            userStreak.longestStreak = newLongest;
+            userStreak.totalDaysSolved = newTotalDays;
+            userStreak.lastSolvedDate = todayStr;
+            userStreak.history.push({ date: todayStr, quesId: String(quesId), solvedAt: new Date() });
+            userStreak.modifiedAt = new Date();
+
+            await userStreak.save();
+
+            currentStreak = newStreak;
+            longestStreak = newLongest;
+            isNewSolve = true;
         }
 
-        // Already solved today
-        if (userStreak.lastSolvedDate === todayStr) {
-            return {
-                isDailyProblem: true,
-                currentStreak: userStreak.currentStreak,
-                longestStreak: userStreak.longestStreak,
-                isNewSolve: false
-            };
+        // Award Haveli Coins on first POTD solve today
+        let coinsEarned = 0;
+        let bonusCoinsEarned = 0;
+        let newCoinBalance = null;
+
+        if (isNewSolve) {
+            try {
+                const config = await HaveliCoinService.getConfig();
+                if (config.potdRewardCoins > 0) {
+                    const label = matchesPersonal ? `Personal AajKaSawal (${personalProblem.topic})` : 'AajKaSawal';
+                    const creditRes = await HaveliCoinService.creditCoins(
+                        userId,
+                        config.potdRewardCoins,
+                        'potd_reward',
+                        `Solved ${label} #${quesId} (${todayStr})`,
+                        { quesId: String(quesId), date: todayStr, isPersonal: !!matchesPersonal }
+                    );
+                    coinsEarned = config.potdRewardCoins;
+                    newCoinBalance = creditRes.balance;
+                }
+
+                // 7-day milestone streak bonus
+                if (currentStreak > 0 && currentStreak % 7 === 0 && config.streakBonusCoins > 0) {
+                    const bonusRes = await HaveliCoinService.creditCoins(
+                        userId,
+                        config.streakBonusCoins,
+                        'streak_bonus',
+                        `${currentStreak}-Day Code Tapasya Streak Bonus!`,
+                        { streak: currentStreak, date: todayStr }
+                    );
+                    bonusCoinsEarned = config.streakBonusCoins;
+                    newCoinBalance = bonusRes.balance;
+                }
+            } catch (coinErr) {
+                console.error('Error awarding Haveli Coins on POTD solve:', coinErr);
+            }
         }
-
-        let newStreak = 1;
-        if (userStreak.lastSolvedDate === yesterdayStr) {
-            newStreak = (userStreak.currentStreak || 0) + 1;
-        }
-
-        const newLongest = Math.max(userStreak.longestStreak || 0, newStreak);
-        const newTotalDays = (userStreak.totalDaysSolved || 0) + 1;
-
-        userStreak.currentStreak = newStreak;
-        userStreak.longestStreak = newLongest;
-        userStreak.totalDaysSolved = newTotalDays;
-        userStreak.lastSolvedDate = todayStr;
-        userStreak.history.push({ date: todayStr, quesId: String(quesId), solvedAt: new Date() });
-        userStreak.modifiedAt = new Date();
-
-        await userStreak.save();
 
         return {
             isDailyProblem: true,
-            currentStreak: newStreak,
-            longestStreak: newLongest,
-            isNewSolve: true
+            isPersonal: !!matchesPersonal,
+            currentStreak,
+            longestStreak,
+            isNewSolve,
+            coinsEarned,
+            bonusCoinsEarned,
+            newCoinBalance
         };
     }
 }

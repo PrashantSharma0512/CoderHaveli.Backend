@@ -176,6 +176,14 @@ class ContestSchedulerService {
                     // Finalize rankings
                     await contestScoringService.updateContestRanks(updated._id);
 
+                    // Award Haveli Coin podium bonuses to Top 3
+                    try {
+                        const HaveliCoinService = require('./haveliCoin.service');
+                        await HaveliCoinService.awardContestRankCoins(updated);
+                    } catch (coinErr) {
+                        console.error('Error awarding contest rank Haveli Coins:', coinErr.message);
+                    }
+
                     // Audit log
                     await ContestAuditLog.create({
                         contest: updated._id,

@@ -398,6 +398,14 @@ const submit = async (req, res) => {
             }
         }
 
+        // Incrementally refresh this user's denormalized leaderboard stats (<2ms)
+        try {
+            const LeaderboardService = require('../services/leaderboard.service');
+            await LeaderboardService.refreshUserStats(userId);
+        } catch (lbErr) {
+            console.error('Error refreshing user leaderboard stats:', lbErr.message);
+        }
+
         return res.json({
             ...response.data,
             code,
@@ -452,20 +460,21 @@ const getSubmission = async (req, res) => {
             {
                 $match: {
                     userId: new mongoose.Types.ObjectId(userId),
-                    quesId: quesId
+                    quesId: String(quesId)
                 }
             },
+            { $sort: { createdAt: -1 } },
+            { $limit: 50 },
             {
                 $project: {
-                    _id: 0,
-                    // "QNo": "$quesId",
+                    _id: 1,
                     Language: "$codelanguage",
                     Status: "$status",
                     "Execution Time": "$execution_time",
                     "Submission Time": "$createdAt",
+                    sourceCode: "$sourceCode"
                 }
-            },
-            { $sort: { createdAt: -1 } }
+            }
         ]);
 
         res.status(200).json(submissions);
@@ -784,6 +793,202 @@ const addQuestion = async (req, res) => {
 }
 
 
+const saveCode = async (req, res) => {
+    try {
+        const userId = req.user?._id || req.body?.userId;
+        const { quesId, language, code } = req.body || {};
+
+        if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(401).json({ success: false, message: 'Unauthorized' });
+        }
+        if (!quesId || !language || typeof code !== 'string') {
+            return res.status(400).json({ success: false, message: 'quesId, language, and code are required' });
+        }
+
+        const Code = mongoose.model('Code');
+        const now = new Date();
+        const saved = await Code.findOneAndUpdate(
+            {
+                userId: new mongoose.Types.ObjectId(userId),
+                quesId: String(quesId),
+                codelanguage: String(language).toLowerCase()
+            },
+            {
+                $set: { code, modifiedAt: now },
+                $setOnInsert: { createdAt: now }
+            },
+            { upsert: true, new: true }
+        );
+
+        return res.status(200).json({
+            success: true,
+            modifiedAt: saved.modifiedAt
+        });
+    } catch (error) {
+        console.error('Error saving user code:', error);
+        return res.status(500).json({ success: false, message: 'Failed to save code' });
+    }
+};
+
+const getSavedCode = async (req, res) => {
+    try {
+        const userId = req.user?._id || req.query?.userId;
+        const { quesId } = req.params;
+        const language = String(req.query?.language || '').toLowerCase();
+
+        if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(401).json({ success: false, message: 'Unauthorized' });
+        }
+        if (!quesId) {
+            return res.status(400).json({ success: false, message: 'quesId is required' });
+        }
+
+        const Code = mongoose.model('Code');
+        const filter = {
+            userId: new mongoose.Types.ObjectId(userId),
+            quesId: String(quesId)
+        };
+        if (language) {
+            filter.codelanguage = language;
+        }
+
+        const saved = await Code.findOne(filter).sort({ modifiedAt: -1 }).lean();
+
+        return res.status(200).json({
+            success: true,
+            code: saved ? saved.code : null,
+            language: saved ? saved.codelanguage : null,
+            modifiedAt: saved ? saved.modifiedAt : null
+        });
+    } catch (error) {
+        console.error('Error fetching saved code:', error);
+        return res.status(500).json({ success: false, message: 'Failed to load saved code' });
+    }
+};
+
+const getUserProblemStats = async (req, res) => {
+    try {
+        const userId = req.user?._id || req.query?.userId;
+        if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(401).json({ success: false, message: 'Unauthorized' });
+        }
+
+        const Submission = mongoose.model('Submission');
+        const ProblemList = mongoose.model('ProblemList');
+        const DailyStreak = mongoose.model('DailyStreak');
+
+        const userObjId = new mongoose.Types.ObjectId(userId);
+
+        const [subAgg, totalDiffAgg, streakDoc] = await Promise.all([
+            Submission.aggregate([
+                { $match: { userId: userObjId } },
+                {
+                    $group: {
+                        _id: '$quesId',
+                        hasAccepted: {
+                            $max: { $cond: [{ $eq: ['$status', 'Accepted'] }, 1, 0] }
+                        },
+                        totalCount: { $sum: 1 },
+                        acceptedCount: {
+                            $sum: { $cond: [{ $eq: ['$status', 'Accepted'] }, 1, 0] }
+                        }
+                    }
+                }
+            ]),
+            ProblemList.aggregate([
+                {
+                    $group: {
+                        _id: { $toLower: '$difficulty' },
+                        count: { $sum: 1 }
+                    }
+                }
+            ]),
+            DailyStreak.findOne({ userId: userObjId }, { currentStreak: 1, longestStreak: 1, totalDaysSolved: 1 }).lean()
+        ]);
+
+        const solvedQuesIds = [];
+        const attemptedQuesIds = [];
+        let totalSubmissions = 0;
+        let acceptedSubmissions = 0;
+
+        for (const row of subAgg) {
+            totalSubmissions += row.totalCount || 0;
+            acceptedSubmissions += row.acceptedCount || 0;
+            if (row.hasAccepted === 1) {
+                solvedQuesIds.push(String(row._id));
+            } else {
+                attemptedQuesIds.push(String(row._id));
+            }
+        }
+
+        const totalByDiff = { easy: 0, medium: 0, hard: 0 };
+        for (const d of totalDiffAgg) {
+            if (d._id === 'easy' || d._id === 'medium' || d._id === 'hard') {
+                totalByDiff[d._id] = d.count;
+            }
+        }
+        const totalProblems = totalByDiff.easy + totalByDiff.medium + totalByDiff.hard;
+
+        const solvedByDiff = { easy: 0, medium: 0, hard: 0 };
+        if (solvedQuesIds.length > 0) {
+            const solvedDiffAgg = await ProblemList.aggregate([
+                { $match: { quesId: { $in: solvedQuesIds } } },
+                {
+                    $group: {
+                        _id: { $toLower: '$difficulty' },
+                        count: { $sum: 1 }
+                    }
+                }
+            ]);
+            for (const d of solvedDiffAgg) {
+                if (d._id === 'easy' || d._id === 'medium' || d._id === 'hard') {
+                    solvedByDiff[d._id] = d.count;
+                }
+            }
+        }
+
+        const acceptanceRate = totalSubmissions > 0
+            ? Number(((acceptedSubmissions / totalSubmissions) * 100).toFixed(1))
+            : 0;
+
+        let rankInfo = null;
+        try {
+            const LeaderboardService = require('../services/leaderboard.service');
+            rankInfo = await LeaderboardService.getUserRank(userId);
+        } catch (rankErr) {
+            console.error('Error computing user rank:', rankErr.message);
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                solvedCount: solvedQuesIds.length,
+                totalProblems,
+                attemptingCount: attemptedQuesIds.length,
+                totalSubmissions,
+                acceptedSubmissions,
+                acceptanceRate,
+                solvedQuesIds,
+                attemptedQuesIds,
+                rankInfo,
+                difficulty: {
+                    easy: { solved: solvedByDiff.easy, total: totalByDiff.easy },
+                    medium: { solved: solvedByDiff.medium, total: totalByDiff.medium },
+                    hard: { solved: solvedByDiff.hard, total: totalByDiff.hard }
+                },
+                streak: {
+                    currentStreak: streakDoc?.currentStreak || 0,
+                    longestStreak: streakDoc?.longestStreak || 0,
+                    totalDaysSolved: streakDoc?.totalDaysSolved || 0
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching user problem stats:', error);
+        return res.status(500).json({ success: false, message: 'Failed to load user problem stats' });
+    }
+};
+
 problemController.getAllProblems = getAllProblems;
 problemController.fetchComment = fetchComment
 problemController.addComment = addComment
@@ -794,6 +999,9 @@ problemController.run = run;
 problemController.submit = submit;
 problemController.getSubmission = getSubmission;
 problemController.getStarterCode = getStarterCode;
+problemController.saveCode = saveCode;
+problemController.getSavedCode = getSavedCode;
+problemController.getUserProblemStats = getUserProblemStats;
 problemController.getProblemById = getProblemById;
 problemController.addLike = addLike;
 problemController.addQuestion = addQuestion;

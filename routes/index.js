@@ -22,4 +22,8 @@ router.get('/check-enrollment', Authenicated, index.checkEnrollment)
 
 
 router.post('/get-course-details', Authenicated, index.getCourseDetails)
-module.exports = router;    
+router.get('/leaderboard', publicAuth, index.getLeaderboard);
+router.get('/leaderboard/my-rank', Authenicated, index.getMyRank);
+router.get('/privacy-policy', publicAuth, index.getPrivacyPolicyStatus);
+router.post('/privacy-policy/respond', Authenicated, index.respondPrivacyPolicy);
+module.exports = router;

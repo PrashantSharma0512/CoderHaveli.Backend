@@ -292,8 +292,61 @@ async function triggerGenerate(req, res) {
 
 }
 
+/**
+ * POST /api/newsletter/subscribe-by-email
+ * Checks if email belongs to a registered user:
+ * - If registered: sets news_subscribe = true
+ * - If not registered: returns registered: false so frontend redirects to /register with popup
+ */
+async function subscribeByEmail(req, res) {
+    try {
+        const rawEmail = String(req.body?.email || "").trim().toLowerCase();
+        if (!rawEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail)) {
+            return res.status(400).json({
+                success: false,
+                registered: false,
+                message: "Please enter a valid email address."
+            });
+        }
+
+        const User = mongoose.model("User");
+        const user = await User.findOne({ email: rawEmail, isDeleted: false });
+
+        if (!user) {
+            return res.status(200).json({
+                success: false,
+                registered: false,
+                message: "This email is not registered yet. Please register first to subscribe to the newsletter."
+            });
+        }
+
+        const alreadySubscribed = Boolean(user.news_subscribe);
+        if (!alreadySubscribed) {
+            user.news_subscribe = true;
+            user.modifiedAt = new Date();
+            await user.save();
+        }
+
+        return res.status(200).json({
+            success: true,
+            registered: true,
+            alreadySubscribed,
+            message: alreadySubscribed
+                ? "You are already subscribed to the CoderHaveli newsletter!"
+                : "Successfully subscribed to the CoderHaveli newsletter!"
+        });
+    } catch (error) {
+        log.error("Subscribe by email error:", error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to process newsletter subscription"
+        });
+    }
+}
+
 module.exports = {
     subscribe,
+    subscribeByEmail,
     unsubscribe,
     getStatus,
     latest,

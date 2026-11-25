@@ -1,7 +1,5 @@
 module.exports = (mongoose) => {
-    return mongoose.model(
-        'User',
-        new mongoose.Schema({
+    const schema = new mongoose.Schema({
             name: {
                 type: String,
                 required: true,
@@ -81,6 +79,42 @@ module.exports = (mongoose) => {
                 type: Boolean,
                 default: false
             },
-        })
-    );
+            haveliCoins: {
+                type: Number,
+                default: 0,
+                min: 0
+            },
+            personalAajKaSawal: {
+                isActive: { type: Boolean, default: false },
+                selectedTopic: { type: String, default: null, trim: true },
+                purchasedAt: { type: Date, default: null },
+                expiresAt: { type: Date, default: null }
+            },
+            leaderboardStats: {
+                solvedCount: { type: Number, default: 0 },
+                easySolved: { type: Number, default: 0 },
+                mediumSolved: { type: Number, default: 0 },
+                hardSolved: { type: Number, default: 0 },
+                totalSubmissions: { type: Number, default: 0 },
+                acceptedSubmissions: { type: Number, default: 0 },
+                score: { type: Number, default: 0 },
+                lastUpdatedAt: { type: Date, default: null }
+            },
+            privacyPolicy: {
+                accepted: { type: Boolean, default: false },
+                acceptedVersion: { type: Number, default: 0 },
+                acceptedAt: { type: Date, default: null },
+                declinedAt: { type: Date, default: null }
+            },
+        });
+
+    schema.index({
+        isDeleted: 1,
+        'leaderboardStats.solvedCount': -1,
+        'leaderboardStats.score': -1,
+        haveliCoins: -1,
+        createdAt: 1
+    });
+
+    return mongoose.model('User', schema);
 };

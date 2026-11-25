@@ -855,5 +855,57 @@ indexController.updateProfile = updateProfile;
 indexController.enrollNow = enrollNow;
 indexController.getCourseDetails = getCourseDetails;
 
+indexController.getLeaderboard = async (req, res) => {
+    try {
+        const LeaderboardService = require('../services/leaderboard.service');
+        const { page, limit, search } = req.query || {};
+        const userId = req.user?._id || req.query?.userId || null;
+        const data = await LeaderboardService.getLeaderboard({ page, limit, search, userId });
+        return res.status(200).json({ success: true, data });
+    } catch (error) {
+        console.error('Error fetching leaderboard:', error);
+        return res.status(500).json({ success: false, message: 'Failed to load leaderboard' });
+    }
+};
+
+indexController.getMyRank = async (req, res) => {
+    try {
+        const LeaderboardService = require('../services/leaderboard.service');
+        const userId = req.user?._id || req.query?.userId;
+        const rankInfo = await LeaderboardService.getUserRank(userId);
+        return res.status(200).json({ success: true, data: rankInfo });
+    } catch (error) {
+        console.error('Error fetching user rank:', error);
+        return res.status(500).json({ success: false, message: 'Failed to load rank' });
+    }
+};
+
+indexController.getPrivacyPolicyStatus = async (req, res) => {
+    try {
+        const PrivacyPolicyService = require('../services/privacyPolicy.service');
+        const userId = req.user?._id || req.query?.userId || null;
+        const data = await PrivacyPolicyService.getUserStatus(userId);
+        return res.status(200).json({ success: true, data });
+    } catch (error) {
+        console.error('Error fetching privacy policy:', error);
+        return res.status(500).json({ success: false, message: 'Failed to load privacy policy' });
+    }
+};
+
+indexController.respondPrivacyPolicy = async (req, res) => {
+    try {
+        const PrivacyPolicyService = require('../services/privacyPolicy.service');
+        const userId = req.user?._id;
+        const { action } = req.body || {};
+        if (action !== 'accept' && action !== 'decline') {
+            return res.status(400).json({ success: false, message: 'action must be accept or decline' });
+        }
+        const data = await PrivacyPolicyService.respondToPolicy(userId, action);
+        return res.status(200).json({ success: true, data });
+    } catch (error) {
+        console.error('Error responding to privacy policy:', error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
 
 module.exports = indexController;

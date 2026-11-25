@@ -404,4 +404,165 @@ adminController.deleteApproach = async (req, res) => {
         });
     }
 }
+
+adminController.getCoinsOverview = async (req, res) => {
+    try {
+        if (req.user?.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Forbidden: Admin access required' });
+        }
+
+        const User = mongoose.model('User');
+        const CoinTransaction = mongoose.model('CoinTransaction');
+        const HaveliCoinService = require('../services/haveliCoin.service');
+
+        const search = (req.query.search || '').trim();
+        const userFilter = search
+            ? {
+                $or: [
+                    { name: { $regex: search, $options: 'i' } },
+                    { email: { $regex: search, $options: 'i' } }
+                ]
+            }
+            : {};
+
+        const [config, users, transactions, circulationAgg, activePersonalCount] = await Promise.all([
+            HaveliCoinService.getConfig(),
+            User.find(userFilter, { name: 1, email: 1, haveliCoins: 1, personalAajKaSawal: 1, role: 1, avatar: 1 })
+                .sort({ haveliCoins: -1, createdAt: -1 })
+                .limit(50)
+                .lean(),
+            CoinTransaction.find({})
+                .sort({ createdAt: -1 })
+                .limit(40)
+                .populate('userId', 'name email')
+                .populate('adminId', 'name email')
+                .lean(),
+            User.aggregate([
+                { $group: { _id: null, totalCoins: { $sum: { $ifNull: ['$haveliCoins', 0] } } } }
+            ]),
+            User.countDocuments({
+                'personalAajKaSawal.isActive': true,
+                'personalAajKaSawal.expiresAt': { $gt: new Date() }
+            })
+        ]);
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                stats: {
+                    totalCoinsInCirculation: circulationAgg[0]?.totalCoins || 0,
+                    activePersonalPlans: activePersonalCount,
+                    recentTransactionsCount: transactions.length
+                },
+                config,
+                users,
+                transactions
+            }
+        });
+    } catch (error) {
+        console.error('Error in getCoinsOverview:', error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+adminController.adjustUserCoins = async (req, res) => {
+    try {
+        if (req.user?.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Forbidden: Admin access required' });
+        }
+
+        const { userId, amount, action, reason } = req.body || {};
+        if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ success: false, message: 'Valid userId is required' });
+        }
+
+        const numAmount = Math.floor(Number(amount));
+        if (!numAmount || numAmount <= 0) {
+            return res.status(400).json({ success: false, message: 'Amount must be a positive integer' });
+        }
+
+        const HaveliCoinService = require('../services/haveliCoin.service');
+        let result;
+        if (action === 'debit') {
+            result = await HaveliCoinService.debitCoins(
+                userId,
+                numAmount,
+                'admin_deduct',
+                reason || 'Admin deduction',
+                { adminAction: 'debit' },
+                req.user._id
+            );
+        } else {
+            result = await HaveliCoinService.creditCoins(
+                userId,
+                numAmount,
+                'admin_grant',
+                reason || 'Admin grant',
+                { adminAction: 'credit' },
+                req.user._id
+            );
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `Successfully ${action === 'debit' ? 'deducted' : 'credited'} ${numAmount} Haveli Coins`,
+            data: result
+        });
+    } catch (error) {
+        const status = error.message.includes('Insufficient') || error.message.includes('not found') ? 400 : 500;
+        return res.status(status).json({ success: false, message: error.message });
+    }
+};
+
+adminController.updateCoinsConfig = async (req, res) => {
+    try {
+        if (req.user?.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Forbidden: Admin access required' });
+        }
+
+        const HaveliCoinService = require('../services/haveliCoin.service');
+        const updated = await HaveliCoinService.updateConfig(req.body || {}, req.user._id);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Haveli Coin settings updated successfully',
+            data: updated
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+adminController.getPrivacyPolicy = async (req, res) => {
+    try {
+        if (req.user?.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Forbidden: Admin access required' });
+        }
+        const PrivacyPolicyService = require('../services/privacyPolicy.service');
+        const data = await PrivacyPolicyService.getAdminOverview();
+        return res.status(200).json({ success: true, data });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+adminController.updatePrivacyPolicy = async (req, res) => {
+    try {
+        if (req.user?.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Forbidden: Admin access required' });
+        }
+        const PrivacyPolicyService = require('../services/privacyPolicy.service');
+        const { title, content } = req.body || {};
+        const updated = await PrivacyPolicyService.updatePolicy({ title, content }, req.user._id);
+        return res.status(200).json({
+            success: true,
+            message: `Privacy Policy updated to v${updated.version}. All users will be prompted to accept the new policy.`,
+            data: updated
+        });
+    } catch (error) {
+        const status = error.message.includes('required') ? 400 : 500;
+        return res.status(status).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = adminController;

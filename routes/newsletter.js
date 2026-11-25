@@ -24,6 +24,7 @@ router.get("/latest", newsletterController.latest);
 router.get("/history", newsletterController.history);
 router.get("/news", newsletterController.getNews);
 router.get("/topics", newsletterController.getTopics);
+router.post("/subscribe-by-email", newsletterController.subscribeByEmail);
 
 // Authenticated endpoints
 router.post("/subscribe", Authenticated, newsletterController.subscribe);

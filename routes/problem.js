@@ -13,6 +13,9 @@ router.get('/problem/get-problem-by-id', Authenicated, AnalyticsMiddleware, Prob
 router.get('/problem/get-editorial/:id', Authenicated, Problem.getEditorialById);
 router.get('/problem/get-submission/:userId/:quesId', Authenicated, Problem.getSubmission);
 router.get('/problem/get-starter-code', Authenicated, Problem.getStarterCode);
+router.get('/problem/code/:quesId', Authenicated, Problem.getSavedCode);
+router.post('/problem/save-code', Authenicated, Problem.saveCode);
+router.get('/problem/user-stats', Authenicated, Problem.getUserProblemStats);
 
 
 // routes for comment section
